@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --y: #FFC107;
+  --yd: #E6A800;
+  --yk: #412402;
+}
+
+body {
+  background: #FFF8E1;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Input global */
+input, select, textarea {
+  background: #FFFBEA;
+  border: 0.5px solid #FAC775;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: #412402;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: #FFC107;
+}
+
+/* Button global */
+.btn-yellow {
+  background: #FFC107;
+  color: #412402;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  width: 100%;
+}
+.btn-yellow:hover { background: #E6A800; }
+
+.btn-dark {
+  background: #412402;
+  color: #FFC107;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  width: 100%;
+}
+.btn-dark:hover { background: #633806; }
+
+/* Card */
+.card {
+  background: #fff;
+  border-radius: 12px;
+  border: 0.5px solid #FAC775;
+  padding: 20px;
+}
+
+/* Topbar */
+.topbar {
+  background: #FFC107;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Badge */
+.badge-aktif   { background: #D4EDDA; color: #155724; padding: 2px 8px; border-radius: 99px; font-size: 11px; }
+.badge-nonaktif{ background: #F8D7DA; color: #721C24; padding: 2px 8px; border-radius: 99px; font-size: 11px; }
+.badge-nota    { background: #E6F1FB; color: #185FA5; padding: 1px 6px;  border-radius: 99px; font-size: 10px; margin-left: 4px; }
+.badge-warning { background: #D85A30; color: #fff;    padding: 2px 6px;  border-radius: 99px; font-size: 10px; }
