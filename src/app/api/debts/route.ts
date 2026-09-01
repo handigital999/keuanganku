@@ -7,17 +7,33 @@ export async function GET(req: NextRequest) {
   const co_id = req.nextUrl.searchParams.get('co_id')
   if (!co_id) return NextResponse.json({ error: 'co_id required' }, { status: 400 })
 
-  const { data, error } = await supabase
-    .from('debts')
-    .select(`
-      *,
-      debt_payments (id, tanggal, nominal, catatan)
-    `)
-    .eq('company_id', co_id)
-    .order('created_at', { ascending: false })
+  try {
+    // Get debts
+    const { data: debts, error: debtError } = await supabase
+      .from('debts')
+      .select('*')
+      .eq('company_id', co_id)
+      .order('created_at', { ascending: false })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+    if (debtError) return NextResponse.json({ error: debtError.message }, { status: 500 })
+
+    // Get all debt_payments
+    const { data: payments, error: paymentError } = await supabase
+      .from('debt_payments')
+      .select('*')
+
+    if (paymentError) return NextResponse.json({ error: paymentError.message }, { status: 500 })
+
+    // Merge payments into debts
+    const result = debts.map((debt: any) => ({
+      ...debt,
+      debt_payments: payments.filter((p: any) => p.debt_id === debt.id)
+    }))
+
+    return NextResponse.json(result)
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {
