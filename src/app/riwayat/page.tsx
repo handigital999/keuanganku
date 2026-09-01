@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { fmt } from '@/lib/utils'
 
 interface Txn { id: string; type: string; tanggal: string; ket: string; nominal: number; catatan: string; nota_num: string }
+interface DetailItem { nama: string; qty: number; satuan: string; harga: number; subtotal: number }
 
 export default function RiwayatPage() {
   const router = useRouter()
@@ -23,6 +24,23 @@ export default function RiwayatPage() {
 
   const list = txns.filter(t => filter === 'semua' || t.type === filter)
 
+  function parseDetailItems(catatan: string): DetailItem[] {
+    if (!catatan) return []
+    try {
+      const parsed = JSON.parse(catatan)
+      if (Array.isArray(parsed)) {
+        return parsed.map((item: any) => ({
+          nama: item.nama || '-',
+          qty: Number(item.qty || 0),
+          satuan: item.satuan || '',
+          harga: Number(item.harga || 0),
+          subtotal: Number(item.subtotal || (Number(item.qty || 0) * Number(item.harga || 0))),
+        }))
+      }
+    } catch {}
+    return []
+  }
+
   async function dlNota() {
     if (!sel) return
     const { jsPDF } = (await import('jspdf')).default ? (await import('jspdf')) : await import('jspdf')
@@ -35,6 +53,8 @@ export default function RiwayatPage() {
     doc.text('Bukti Transaksi', 74, 19, { align: 'center' })
     doc.text('No. Nota: ' + (sel.nota_num || sel.id), 74, 26, { align: 'center' })
     doc.setTextColor(50, 50, 50); doc.setFontSize(10)
+
+    const detailItems = parseDetailItems(sel.catatan)
     const rows: [string, string][] = [
       ['Tanggal', sel.tanggal],
       ['Jenis', sel.type === 'masuk' ? 'Uang Masuk' : 'Uang Keluar'],
@@ -48,6 +68,19 @@ export default function RiwayatPage() {
       doc.setFont(undefined as any, 'normal'); doc.text(v, 50, y)
       y += 9
     })
+
+    if (detailItems.length > 0) {
+      y += 4
+      doc.setFont(undefined as any, 'bold'); doc.text('Detail Barang:', 14, y)
+      y += 7
+      detailItems.forEach((item) => {
+        const label = `${item.nama} (${item.qty}${item.satuan ? ' ' + item.satuan : ''}) @ ${fmt(item.harga)}`
+        doc.setFont(undefined as any, 'normal'); doc.text(label, 18, y)
+        doc.text(fmt(item.subtotal), 120, y, { align: 'right' })
+        y += 7
+      })
+    }
+
     doc.setDrawColor(255, 193, 7); doc.line(14, y + 2, 134, y + 2)
     doc.setFontSize(8); doc.setTextColor(150, 150, 150)
     doc.text('KeuanganKu — Aplikasi Kontrol Keuangan Usaha', 74, y + 10, { align: 'center' })
@@ -99,6 +132,18 @@ export default function RiwayatPage() {
                   <span style={{ color: '#412402', fontWeight: 500 }}>{v}</span>
                 </div>
               ))}
+
+              {parseDetailItems(sel.catatan).length > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <p style={{ fontSize: 12, fontWeight: 500, color: '#412402', marginBottom: 6 }}>Rincian barang</p>
+                  {parseDetailItems(sel.catatan).map((item, idx) => (
+                    <div key={`${item.nama}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12, color: '#412402', padding: '4px 0', borderBottom: '0.5px solid #FFF3CD' }}>
+                      <span>{item.nama} ({item.qty}{item.satuan ? ` ${item.satuan}` : ''})</span>
+                      <span>{fmt(item.subtotal)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Preview nota */}
@@ -113,6 +158,19 @@ export default function RiwayatPage() {
                   <tr key={l}><td style={{ color: '#854F0B', padding: '5px 3px' }}>{l}</td><td style={{ textAlign: 'right', padding: '5px 3px' }}>{v}</td></tr>
                 ))}
               </table>
+
+              {parseDetailItems(sel.catatan).length > 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <p style={{ fontSize: 11, fontWeight: 500, color: '#412402', marginBottom: 6 }}>Rincian barang</p>
+                  {parseDetailItems(sel.catatan).map((item, idx) => (
+                    <div key={`preview-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#412402', padding: '2px 0' }}>
+                      <span>{item.nama} ({item.qty}{item.satuan ? ` ${item.satuan}` : ''})</span>
+                      <span>{fmt(item.subtotal)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <p style={{ textAlign: 'right', marginTop: 10, fontSize: 13, fontWeight: 500, color: '#412402' }}>Total: {fmt(sel.nominal)}</p>
             </div>
 

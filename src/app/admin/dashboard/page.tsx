@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-interface Company { id: string; name: string; email: string; active: boolean; created_at: string }
+interface Company { id: string; name: string; email: string; active: boolean; role: 'user' | 'owner'; created_at: string }
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -16,6 +16,7 @@ export default function AdminDashboardPage() {
   const [fEmail, setFEmail] = useState('')
   const [fPin, setFPin]   = useState('')
   const [fPin2, setFPin2] = useState('')
+  const [fRole, setFRole] = useState<'user' | 'owner'>('user')
 
   useEffect(() => {
     // Guard: hanya admin yang boleh masuk
@@ -48,12 +49,12 @@ export default function AdminDashboardPage() {
     const res = await fetch('/api/companies', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: fName, email: fEmail, pin: fPin }),
+      body: JSON.stringify({ name: fName, email: fEmail, pin: fPin, role: fRole }),
     })
     const data = await res.json()
     if (res.ok) {
-      setAddOk('Perusahaan berhasil didaftarkan!')
-      setFName(''); setFEmail(''); setFPin(''); setFPin2('')
+      setAddOk(`Perusahaan berhasil didaftarkan dengan akses ${fRole === 'owner' ? 'Owner user (lihat saja)' : 'User biasa'}.`)
+      setFName(''); setFEmail(''); setFPin(''); setFPin2(''); setFRole('user')
       loadCompanies()
     } else {
       setAddErr(data.error || 'Gagal mendaftarkan.')
@@ -187,7 +188,7 @@ export default function AdminDashboardPage() {
                   <input style={inputStyle} type="email" value={fEmail} onChange={e => setFEmail(e.target.value)} placeholder="email@usaha.com" />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, color: '#633806', marginBottom: 4, fontWeight: 500 }}>PIN (min 4 digit)</label>
                   <input style={inputStyle} type="password" value={fPin} onChange={e => setFPin(e.target.value)} maxLength={6} placeholder="••••••" />
@@ -196,6 +197,13 @@ export default function AdminDashboardPage() {
                   <label style={{ display: 'block', fontSize: 13, color: '#633806', marginBottom: 4, fontWeight: 500 }}>Ulangi PIN</label>
                   <input style={inputStyle} type="password" value={fPin2} onChange={e => setFPin2(e.target.value)} maxLength={6} placeholder="••••••" />
                 </div>
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 13, color: '#633806', marginBottom: 4, fontWeight: 500 }}>Tipe akses</label>
+                <select style={inputStyle} value={fRole} onChange={e => setFRole(e.target.value as 'user' | 'owner')}>
+                  <option value="user">User biasa</option>
+                  <option value="owner">Owner user (lihat saja)</option>
+                </select>
               </div>
               {addErr && <p style={{ fontSize: 12, color: '#A32D2D', marginBottom: 10 }}>{addErr}</p>}
               {addOk && <p style={{ fontSize: 13, color: '#155724', background: '#D4EDDA', padding: '10px 14px', borderRadius: 8, marginBottom: 12 }}>{addOk}</p>}

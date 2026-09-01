@@ -19,7 +19,12 @@ export default function StokPage() {
 
   useEffect(() => {
     const id = localStorage.getItem('co_id')
+    const role = localStorage.getItem('user_role') || 'user'
     if (!id) { router.push('/'); return }
+    if (role === 'owner') {
+      router.push('/dashboard')
+      return
+    }
     setCoId(id)
     fetch(`/api/stok?co_id=${id}`).then(r => r.json()).then(d => { setStoks(d || []); setLoading(false) })
   }, [router])

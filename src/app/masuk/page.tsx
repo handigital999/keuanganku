@@ -16,7 +16,12 @@ export default function FormMasukPage() {
 
   useEffect(() => {
     const id = localStorage.getItem('co_id')
+    const role = localStorage.getItem('user_role') || 'user'
     if (!id) { router.push('/'); return }
+    if (role === 'owner') {
+      router.push('/dashboard')
+      return
+    }
     setCoId(id)
   }, [router])
 

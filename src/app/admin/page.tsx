@@ -36,11 +36,11 @@ export default function AdminLoginPage() {
           <p style={{ fontSize: 13, color: '#854F0B', marginTop: 2 }}>KeuanganKu — Akses terbatas</p>
         </div>
 
-        <div style={{ display: 'inline-block', fontSize: 11, padding: '3px 10px', borderRadius: 99, background: '#412402', color: '#FFC107', marginBottom: 16, fontWeight: 500 }}>Login sebagai admin</div>
+        <div style={{ display: 'inline-block', fontSize: 11, padding: '3px 10px', borderRadius: 99, background: '#412402', color: '#FFC107', marginBottom: 16, fontWeight: 500 }}>Login developer</div>
 
         <div style={{ marginBottom: 12 }}>
-          <label style={{ display: 'block', fontSize: 13, color: '#633806', marginBottom: 4, fontWeight: 500 }}>Email admin</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@keuanganku.com" />
+          <label style={{ display: 'block', fontSize: 13, color: '#633806', marginBottom: 4, fontWeight: 500 }}>Email developer</label>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="developer@keuanganku.com" />
         </div>
         <div style={{ marginBottom: 12 }}>
           <label style={{ display: 'block', fontSize: 13, color: '#633806', marginBottom: 4, fontWeight: 500 }}>Password</label>
@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
         </div>
         {err && <p style={{ fontSize: 12, color: '#A32D2D', marginBottom: 8 }}>{err}</p>}
         <button className="btn-dark" onClick={doAdminLogin} disabled={loading}>
-          {loading ? 'Memuat...' : 'Masuk sebagai admin'}
+          {loading ? 'Memuat...' : 'Masuk sebagai developer'}
         </button>
         <p style={{ textAlign: 'center', marginTop: 14, fontSize: 13, color: '#854F0B' }}>
           User?{' '}

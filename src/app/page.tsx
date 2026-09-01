@@ -16,7 +16,7 @@ export default function LoginPage() {
     // Cek perusahaan dengan email + pin
     const { data, error } = await supabase
       .from('companies')
-      .select('id, name, active')
+      .select('id, name, active, role')
       .eq('email', email.trim())
       .eq('pin', pin.trim())
       .single()
@@ -25,11 +25,13 @@ export default function LoginPage() {
       setErr('Email atau PIN tidak sesuai.'); setLoading(false); return
     }
     if (!data.active) {
-      setErr('Akun perusahaan ini belum aktif. Hubungi admin.'); setLoading(false); return
+      setErr('Akun perusahaan ini belum aktif. Hubungi developer.'); setLoading(false); return
     }
     // Simpan sesi perusahaan ke localStorage
     localStorage.setItem('co_id', data.id)
     localStorage.setItem('co_name', data.name)
+    localStorage.setItem('user_role', data.role || 'user')
+    localStorage.setItem('is_owner', String(data.role === 'owner'))
     router.push('/dashboard')
     setLoading(false)
   }

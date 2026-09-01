@@ -6,49 +6,58 @@ export async function GET(req: NextRequest) {
   const supabase = createServerSupabase()
   const co_id = req.nextUrl.searchParams.get('co_id')
   if (!co_id) return NextResponse.json({ error: 'co_id required' }, { status: 400 })
+
   const { data, error } = await supabase
-    .from('stocks')
-    .select('*')
+    .from('debts')
+    .select(`
+      *,
+      debt_payments (id, tanggal, nominal, catatan)
+    `)
     .eq('company_id', co_id)
-    .order('nama')
+    .order('created_at', { ascending: false })
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json()
-  const { company_id, nama, jml, satuan, harga, min_stok } = body
+  const { company_id, type, nama, keterangan, total, jatuh_tempo } = await req.json()
+
+  if (!company_id || !type || !nama || !total)
+    return NextResponse.json({ error: 'Field tidak lengkap' }, { status: 400 })
 
   // Cek apakah perusahaan owner (tidak boleh mengubah data)
   const { isOwner, response: ownerError } = await checkOwnerAccess(company_id)
   if (ownerError || isOwner) return ownerError || NextResponse.json({ error: 'Akses ditolak' }, { status: 403 })
 
   const supabase = createServerSupabase()
-  if (!company_id || !nama || !jml || !satuan) {
-    return NextResponse.json({ error: 'Field tidak lengkap' }, { status: 400 })
-  }
+
   const { data, error } = await supabase
-    .from('stocks')
-    .insert({ company_id, nama, jml, satuan, harga: harga || 0, min_stok: min_stok || 0 })
+    .from('debts')
+    .insert({ company_id, type, nama, keterangan, total, jatuh_tempo, lunas: false })
     .select()
     .single()
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
 
-export async function DELETE(req: NextRequest) {
-  const id = req.nextUrl.searchParams.get('id')
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+export async function PATCH(req: NextRequest) {
+  const { id, lunas } = await req.json()
 
-  // Ambil company_id dari stock record untuk cek role
+  // Ambil company_id dari debt record untuk cek role
   const supabase = createServerSupabase()
-  const { data: stock } = await supabase.from('stocks').select('company_id').eq('id', id).single()
-  if (!stock) return NextResponse.json({ error: 'Stok tidak ditemukan' }, { status: 404 })
+  const { data: debt } = await supabase.from('debts').select('company_id').eq('id', id).single()
+  if (!debt) return NextResponse.json({ error: 'Utang/piutang tidak ditemukan' }, { status: 404 })
 
-  const { isOwner, response: ownerError } = await checkOwnerAccess(stock.company_id)
+  const { isOwner, response: ownerError } = await checkOwnerAccess(debt.company_id)
   if (ownerError || isOwner) return ownerError || NextResponse.json({ error: 'Akses ditolak' }, { status: 403 })
 
-  const { error } = await supabase.from('stocks').delete().eq('id', id)
+  const { error } = await supabase
+    .from('debts')
+    .update({ lunas })
+    .eq('id', id)
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

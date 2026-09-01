@@ -16,12 +16,14 @@ export default function DashboardPage() {
   const [txns, setTxns]     = useState<Txn[]>([])
   const [stoks, setStoks]   = useState<Stok[]>([])
   const [loading, setLoading] = useState(true)
+  const [isOwner, setIsOwner] = useState(false)
 
   useEffect(() => {
     const id   = localStorage.getItem('co_id')
     const name = localStorage.getItem('co_name')
+    const role = localStorage.getItem('user_role') || 'user'
     if (!id) { router.push('/'); return }
-    setCoId(id); setCoName(name || '')
+    setCoId(id); setCoName(name || ''); setIsOwner(role === 'owner')
     Promise.all([
       fetch(`/api/transaksi?co_id=${id}`).then(r => r.json()),
       fetch(`/api/stok?co_id=${id}`).then(r => r.json()),
@@ -80,25 +82,34 @@ export default function DashboardPage() {
         )}
 
         {/* Menu utama */}
+        {isOwner && (
+          <div style={{ background: '#FFF3CD', border: '0.5px solid #FAC775', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#854F0B' }}>
+            Mode owner: akun ini hanya dapat melihat data, tidak dapat mengubah atau menambah transaksi.
+          </div>
+        )}
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
           {[
-            { label: 'Uang masuk', desc: 'Catat + buat nota', bg: '#E1F5EE', icon: '↑', href: '/masuk' },
-            { label: 'Uang keluar', desc: 'Catat + bukti bayar', bg: '#FAECE7', icon: '↓', href: '/keluar' },
-            { label: 'Riwayat & nota', desc: 'Lihat & download PDF', bg: '#E6F1FB', icon: '◻', href: '/riwayat' },
-            { label: 'Rekap bulanan', desc: 'Laporan & download', bg: '#EAF3DE', icon: '▤', href: '/rekap' },
-            { label: 'Stok barang', desc: 'Kelola stok usaha', bg: '#FAEEDA', icon: '≡', href: '/stok', notif: stokMenipis.length },
-          ].map(m => (
-            <div key={m.href} className="card" style={{ cursor: 'pointer', padding: 14 }} onClick={() => router.push(m.href)}>
-              <div style={{ width: 32, height: 32, background: m.bg, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8, fontSize: 14 }}>
-                {m.icon}
+            { label: 'Uang masuk', desc: 'Catat + buat nota', bg: '#E1F5EE', icon: '↑', href: '/masuk', editable: true },
+            { label: 'Uang keluar', desc: 'Catat + bukti bayar', bg: '#FAECE7', icon: '↓', href: '/keluar', editable: true },
+            { label: 'Riwayat & nota', desc: 'Lihat & download PDF', bg: '#E6F1FB', icon: '◻', href: '/riwayat', editable: false },
+            { label: 'Rekap bulanan', desc: 'Laporan & download', bg: '#EAF3DE', icon: '▤', href: '/rekap', editable: false },
+            { label: 'Stok barang', desc: 'Kelola stok usaha', bg: '#FAEEDA', icon: '≡', href: '/stok', notif: stokMenipis.length, editable: true },
+            { label: 'Utang & Piutang', desc: 'Catat & cicil utang piutang', bg: '#F0E6FB', icon: '⇄', href: '/utang', editable: true },
+          ]
+            .filter(m => !isOwner || !m.editable)
+            .map(m => (
+              <div key={m.href} className="card" style={{ cursor: 'pointer', padding: 14 }} onClick={() => router.push(m.href)}>
+                <div style={{ width: 32, height: 32, background: m.bg, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8, fontSize: 14 }}>
+                  {m.icon}
+                </div>
+                <p style={{ fontSize: 13, fontWeight: 500, color: '#412402' }}>
+                  {m.label}
+                  {!!m.notif && <span className="badge-warning" style={{ marginLeft: 6 }}>{m.notif}</span>}
+                </p>
+                <p style={{ fontSize: 11, color: '#854F0B', marginTop: 2 }}>{m.desc}</p>
               </div>
-              <p style={{ fontSize: 13, fontWeight: 500, color: '#412402' }}>
-                {m.label}
-                {!!m.notif && <span className="badge-warning" style={{ marginLeft: 6 }}>{m.notif}</span>}
-              </p>
-              <p style={{ fontSize: 11, color: '#854F0B', marginTop: 2 }}>{m.desc}</p>
-            </div>
-          ))}
+            ))}
         </div>
 
         {/* Transaksi terakhir */}
