@@ -17,6 +17,9 @@ export default function UtangPage() {
   const [loading, setLoading] = useState(true)
   const [isOwner, setIsOwner] = useState(false)
 
+  const sisa = (d: Debt) => d.total - d.debt_payments.reduce((s, p) => s + p.nominal, 0)
+  const pct = (d: Debt) => Math.min(100, Math.round((d.debt_payments.reduce((s, p) => s + p.nominal, 0) / d.total) * 100))
+
   useEffect(() => {
     const id = localStorage.getItem('co_id')
     const role = localStorage.getItem('user_role') || 'user'
@@ -29,9 +32,6 @@ export default function UtangPage() {
 
   const totalUtang = debts.filter(d => d.type === 'utang' && !d.lunas).reduce((s, d) => s + sisa(d), 0)
   const totalPiutang = debts.filter(d => d.type === 'piutang' && !d.lunas).reduce((s, d) => s + sisa(d), 0)
-
-  const sisa = (d: Debt) => d.total - d.debt_payments.reduce((s, p) => s + p.nominal, 0)
-  const pct = (d: Debt) => Math.min(100, Math.round((d.debt_payments.reduce((s, p) => s + p.nominal, 0) / d.total) * 100))
 
   const filtered = debts.filter(d => {
     if (filter === 'utang') return d.type === 'utang' && !d.lunas
