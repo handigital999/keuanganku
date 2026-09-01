@@ -16,6 +16,7 @@ export default function UtangPage() {
   const [filter, setFilter] = useState('semua')
   const [loading, setLoading] = useState(true)
   const [isOwner, setIsOwner] = useState(false)
+  const [error, setError] = useState('')
 
   const sisa = (d: Debt) => d.total - d.debt_payments.reduce((s, p) => s + p.nominal, 0)
   const pct = (d: Debt) => Math.min(100, Math.round((d.debt_payments.reduce((s, p) => s + p.nominal, 0) / d.total) * 100))
@@ -25,9 +26,23 @@ export default function UtangPage() {
     const role = localStorage.getItem('user_role') || 'user'
     if (!id) { router.push('/'); return }
     setIsOwner(role === 'owner')
-    fetch(`/api/debts?co_id=${id}`).then(r => r.json()).then(d => {
-      setDebts(d || []); setLoading(false)
-    })
+    
+    fetch(`/api/debts?co_id=${id}`)
+      .then(r => {
+        if (!r.ok) throw new Error(`API error: ${r.status}`)
+        return r.json()
+      })
+      .then(d => {
+        if (Array.isArray(d)) setDebts(d)
+        else throw new Error('Invalid data format')
+        setError('')
+      })
+      .catch(err => {
+        console.error('Fetch debts error:', err)
+        setError(err.message)
+        setDebts([])
+      })
+      .finally(() => setLoading(false))
   }, [router])
 
   const totalUtang = debts.filter(d => d.type === 'utang' && !d.lunas).reduce((s, d) => s + sisa(d), 0)
@@ -82,11 +97,16 @@ export default function UtangPage() {
         </div>
 
         <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #FAC775', overflow: 'hidden', marginBottom: 14 }}>
+          {error && (
+            <p style={{ padding: 16, textAlign: 'center', fontSize: 13, color: '#A32D2D', background: '#F8D7DA', borderBottom: '1px solid #F5C6CB' }}>
+              ❌ Error: {error}
+            </p>
+          )}
           {loading ? (
             <p style={{ padding: 16, textAlign: 'center', fontSize: 13, color: '#854F0B' }}>Memuat...</p>
-          ) : filtered.length === 0 ? (
+          ) : !error && filtered.length === 0 ? (
             <p style={{ padding: 16, textAlign: 'center', fontSize: 13, color: '#854F0B' }}>Belum ada data</p>
-          ) : filtered.map(d => {
+          ) : !error && filtered.map(d => {
             const p = pct(d)
             const s = sisa(d)
             const isUtang = d.type === 'utang'
