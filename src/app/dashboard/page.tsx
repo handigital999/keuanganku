@@ -95,7 +95,8 @@ export default function DashboardPage() {
             { label: 'Riwayat & nota', desc: 'Lihat & download PDF', bg: '#E6F1FB', icon: '◻', href: '/riwayat', editable: false },
             { label: 'Rekap bulanan', desc: 'Laporan & download', bg: '#EAF3DE', icon: '▤', href: '/rekap', editable: false },
             { label: 'Stok barang', desc: 'Kelola stok usaha', bg: '#FAEEDA', icon: '≡', href: '/stok', notif: stokMenipis.length, editable: true },
-            { label: 'Utang & Piutang', desc: 'Catat & cicil utang piutang', bg: '#F0E6FB', icon: '⇄', href: '/utang', editable: true },
+            { label: 'Utang', desc: 'Catat & cicil utang', bg: '#FFF3CD', icon: '↑', href: '/utang', editable: true },
+            { label: 'Piutang', desc: 'Catat & cicil piutang', bg: '#C8E6C9', icon: '↓', href: '/piutang', editable: true },
           ]
             .filter(m => !isOwner || !m.editable)
             .map(m => (

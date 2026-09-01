@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 export default function TambahUtangPage() {
   const router = useRouter()
   const [coId, setCoId] = useState('')
-  const [type, setType] = useState('utang')
   const [nama, setNama] = useState('')
   const [ket, setKet] = useState('')
   const [total, setTotal] = useState('')
@@ -30,50 +29,34 @@ export default function TambahUtangPage() {
     const res = await fetch('/api/debts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company_id: coId, type, nama, keterangan: ket, total: parseFloat(total), jatuh_tempo: jatuh || null }),
+      body: JSON.stringify({ company_id: coId, type: 'utang', nama, keterangan: ket, total: parseFloat(total), jatuh_tempo: jatuh || null }),
     })
     if (res.ok) router.push('/utang')
     else { const d = await res.json(); setErr(d.error || 'Gagal menyimpan.') }
     setLoading(false)
   }
 
-  const isUtang = type === 'utang'
-
   return (
     <div style={{ background: '#FFF8E1', minHeight: '100vh' }}>
       <div style={{ background: '#854F0B', padding: '12px 16px' }}>
-        <p style={{ fontSize: 15, fontWeight: 500, color: '#FAEEDA' }}>Tambah utang / piutang</p>
+        <p style={{ fontSize: 15, fontWeight: 500, color: '#FAEEDA' }}>Tambah utang baru</p>
       </div>
       <div style={{ padding: 14 }}>
         <button style={{ background: '#FAEEDA', color: '#412402', border: '0.5px solid #FAC775', padding: '7px 14px', borderRadius: 8, fontSize: 13, cursor: 'pointer', marginBottom: 14 }} onClick={() => router.push('/utang')}>← Kembali</button>
 
         <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #FAC775', padding: 18 }}>
-          <p style={{ fontSize: 15, fontWeight: 500, color: '#412402', marginBottom: 16 }}>Form pencatatan</p>
-
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 13, color: '#633806', marginBottom: 6, fontWeight: 500 }}>Jenis</label>
-            <div style={{ display: 'flex', background: '#FAEEDA', borderRadius: 10, padding: 3, gap: 3 }}>
-              {['utang', 'piutang'].map(t => (
-                <button key={t} style={{ flex: 1, padding: '8px', border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 500, cursor: 'pointer', background: type === t ? (t === 'utang' ? '#993C1D' : '#0F6E56') : 'transparent', color: type === t ? '#fff' : '#854F0B' }} onClick={() => setType(t)}>
-                  {t === 'utang' ? '↑ Utang (kamu yang berhutang)' : '↓ Piutang (kamu yang berpiutang)'}
-                </button>
-              ))}
-            </div>
-            <p style={{ fontSize: 11, color: '#854F0B', marginTop: 6 }}>
-              {isUtang ? '💡 Utang = kamu pinjam uang/barang dari orang lain' : '💡 Piutang = orang lain yang pinjam ke kamu'}
-            </p>
-          </div>
+          <p style={{ fontSize: 15, fontWeight: 500, color: '#412402', marginBottom: 16 }}>Form pencatatan utang</p>
 
           <div style={{ marginBottom: 12 }}>
             <label style={{ display: 'block', fontSize: 13, color: '#633806', marginBottom: 4, fontWeight: 500 }}>
-              {isUtang ? 'Nama pemberi utang / kreditur' : 'Nama peminjam / debitur'}
+              Nama pemberi utang / kreditur
             </label>
-            <input value={nama} onChange={e => setNama(e.target.value)} placeholder={isUtang ? 'Budi Santoso / Toko ABC' : 'PT. Maju Bersama'} />
+            <input value={nama} onChange={e => setNama(e.target.value)} placeholder="Budi Santoso / Toko ABC" />
           </div>
 
           <div style={{ marginBottom: 12 }}>
             <label style={{ display: 'block', fontSize: 13, color: '#633806', marginBottom: 4, fontWeight: 500 }}>Keterangan (opsional)</label>
-            <input value={ket} onChange={e => setKet(e.target.value)} placeholder={isUtang ? 'Pinjaman modal, hutang barang...' : 'Piutang penjualan, jasa konsultasi...'} />
+            <input value={ket} onChange={e => setKet(e.target.value)} placeholder="Pinjaman modal, hutang barang..." />
           </div>
 
           <div style={{ marginBottom: 12 }}>
@@ -87,8 +70,8 @@ export default function TambahUtangPage() {
           </div>
 
           {err && <p style={{ fontSize: 12, color: '#A32D2D', marginBottom: 10 }}>{err}</p>}
-          <button style={{ background: isUtang ? '#993C1D' : '#0F6E56', color: '#fff', border: 'none', padding: 11, borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer', width: '100%' }} onClick={save} disabled={loading}>
-            {loading ? 'Menyimpan...' : `Simpan ${isUtang ? 'utang' : 'piutang'}`}
+          <button style={{ background: '#993C1D', color: '#fff', border: 'none', padding: 11, borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer', width: '100%' }} onClick={save} disabled={loading}>
+            {loading ? 'Menyimpan...' : 'Simpan utang'}
           </button>
         </div>
       </div>
