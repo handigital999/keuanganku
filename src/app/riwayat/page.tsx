@@ -59,9 +59,11 @@ export default function RiwayatPage() {
       ['Tanggal', sel.tanggal],
       ['Jenis', sel.type === 'masuk' ? 'Uang Masuk' : 'Uang Keluar'],
       ['Keterangan', sel.ket],
-      ['Catatan', sel.catatan || '-'],
-      ['Jumlah', fmt(sel.nominal)],
     ]
+    if (detailItems.length === 0) {
+      rows.push(['Catatan', sel.catatan || '-'])
+    }
+    rows.push(['Jumlah', fmt(sel.nominal)])
     let y = 40
     rows.forEach(([l, v]) => {
       doc.setFont(undefined as any, 'bold'); doc.text(l + ':', 14, y)
@@ -70,14 +72,15 @@ export default function RiwayatPage() {
     })
 
     if (detailItems.length > 0) {
-      y += 4
-      doc.setFont(undefined as any, 'bold'); doc.text('Detail Barang:', 14, y)
-      y += 7
+      y += 2
+      doc.setFont(undefined as any, 'bold'); doc.setFontSize(9); doc.text('Rincian Pengeluaran:', 14, y)
+      y += 6
+      doc.setFontSize(8)
       detailItems.forEach((item) => {
         const label = `${item.nama} (${item.qty}${item.satuan ? ' ' + item.satuan : ''}) @ ${fmt(item.harga)}`
         doc.setFont(undefined as any, 'normal'); doc.text(label, 18, y)
         doc.text(fmt(item.subtotal), 120, y, { align: 'right' })
-        y += 7
+        y += 6
       })
     }
 
