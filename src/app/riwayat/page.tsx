@@ -126,24 +126,48 @@ export default function RiwayatPage() {
           <>
             <div className="card" style={{ marginBottom: 12 }}>
               <p style={{ fontSize: 14, fontWeight: 500, color: '#412402', marginBottom: 12 }}>Detail transaksi</p>
-              {[['No. Nota', sel.nota_num || sel.id], ['Tanggal', sel.tanggal], ['Jenis', sel.type === 'masuk' ? 'Uang masuk' : 'Uang keluar'], ['Keterangan', sel.ket], ['Catatan', sel.catatan || '-'], ['Jumlah', fmt(sel.nominal)]].map(([l, v]) => (
+              {[['No. Nota', sel.nota_num || sel.id], ['Tanggal', sel.tanggal], ['Jenis', sel.type === 'masuk' ? 'Uang masuk' : 'Uang keluar'], ['Keterangan', sel.ket], ['Jumlah', fmt(sel.nominal)]].map(([l, v]) => (
                 <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid #FFF3CD', fontSize: 13 }}>
                   <span style={{ color: '#854F0B' }}>{l}</span>
                   <span style={{ color: '#412402', fontWeight: 500 }}>{v}</span>
                 </div>
               ))}
 
-              {parseDetailItems(sel.catatan).length > 0 && (
-                <div style={{ marginTop: 12 }}>
-                  <p style={{ fontSize: 12, fontWeight: 500, color: '#412402', marginBottom: 6 }}>Rincian barang</p>
-                  {parseDetailItems(sel.catatan).map((item, idx) => (
-                    <div key={`${item.nama}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12, color: '#412402', padding: '4px 0', borderBottom: '0.5px solid #FFF3CD' }}>
-                      <span>{item.nama} ({item.qty}{item.satuan ? ` ${item.satuan}` : ''})</span>
-                      <span>{fmt(item.subtotal)}</span>
+              {(() => {
+                const detailItems = parseDetailItems(sel.catatan)
+                if (detailItems.length === 0) {
+                  return (
+                    <div style={{ marginTop: 12, paddingTop: 8, borderTop: '0.5px solid #FFF3CD' }}>
+                      <p style={{ fontSize: 12, fontWeight: 500, color: '#412402', marginBottom: 6 }}>Catatan</p>
+                      <p style={{ fontSize: 12, color: '#412402', whiteSpace: 'pre-wrap' }}>{sel.catatan || '-'}</p>
                     </div>
-                  ))}
-                </div>
-              )}
+                  )
+                }
+
+                return (
+                  <div style={{ marginTop: 12, paddingTop: 8, borderTop: '0.5px solid #FFF3CD' }}>
+                    <p style={{ fontSize: 12, fontWeight: 500, color: '#412402', marginBottom: 8 }}>Rincian pengeluaran</p>
+                    <div style={{ border: '0.5px solid #FAC775', borderRadius: 8, overflow: 'hidden' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1.7fr 0.7fr 0.8fr 0.9fr 0.9fr', background: '#FFF3CD', fontSize: 11, fontWeight: 700, color: '#412402' }}>
+                        <div style={{ padding: '8px 10px', borderRight: '0.5px solid #F8D9A8' }}>Nama</div>
+                        <div style={{ padding: '8px 10px', borderRight: '0.5px solid #F8D9A8', textAlign: 'center' }}>Qty</div>
+                        <div style={{ padding: '8px 10px', borderRight: '0.5px solid #F8D9A8', textAlign: 'center' }}>Satuan</div>
+                        <div style={{ padding: '8px 10px', borderRight: '0.5px solid #F8D9A8', textAlign: 'right' }}>Harga</div>
+                        <div style={{ padding: '8px 10px', textAlign: 'right' }}>Subtotal</div>
+                      </div>
+                      {detailItems.map((item, idx) => (
+                        <div key={`${item.nama}-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1.7fr 0.7fr 0.8fr 0.9fr 0.9fr', fontSize: 11, color: '#412402', borderTop: '0.5px solid #F8D9A8' }}>
+                          <div style={{ padding: '8px 10px', borderRight: '0.5px solid #F8D9A8' }}>{item.nama}</div>
+                          <div style={{ padding: '8px 10px', borderRight: '0.5px solid #F8D9A8', textAlign: 'center' }}>{item.qty}</div>
+                          <div style={{ padding: '8px 10px', borderRight: '0.5px solid #F8D9A8', textAlign: 'center' }}>{item.satuan || '-'}</div>
+                          <div style={{ padding: '8px 10px', borderRight: '0.5px solid #F8D9A8', textAlign: 'right' }}>{fmt(item.harga)}</div>
+                          <div style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600 }}>{fmt(item.subtotal)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Preview nota */}
@@ -154,22 +178,32 @@ export default function RiwayatPage() {
                 <p style={{ fontSize: 11, color: '#633806', marginTop: 4 }}>No. Nota: {sel.nota_num || sel.id}</p>
               </div>
               <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
-                {[['Tanggal', sel.tanggal], ['Jenis', sel.type === 'masuk' ? 'Uang masuk' : 'Uang keluar'], ['Keterangan', sel.ket], ['Catatan', sel.catatan || '-']].map(([l, v]) => (
+                {[['Tanggal', sel.tanggal], ['Jenis', sel.type === 'masuk' ? 'Uang masuk' : 'Uang keluar'], ['Keterangan', sel.ket]].map(([l, v]) => (
                   <tr key={l}><td style={{ color: '#854F0B', padding: '5px 3px' }}>{l}</td><td style={{ textAlign: 'right', padding: '5px 3px' }}>{v}</td></tr>
                 ))}
               </table>
 
-              {parseDetailItems(sel.catatan).length > 0 && (
-                <div style={{ marginTop: 10 }}>
-                  <p style={{ fontSize: 11, fontWeight: 500, color: '#412402', marginBottom: 6 }}>Rincian barang</p>
-                  {parseDetailItems(sel.catatan).map((item, idx) => (
-                    <div key={`preview-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#412402', padding: '2px 0' }}>
-                      <span>{item.nama} ({item.qty}{item.satuan ? ` ${item.satuan}` : ''})</span>
-                      <span>{fmt(item.subtotal)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {(() => {
+                const detailItems = parseDetailItems(sel.catatan)
+                if (detailItems.length === 0) {
+                  return <p style={{ marginTop: 10, fontSize: 11, color: '#412402', whiteSpace: 'pre-wrap' }}>{sel.catatan || '-'}</p>
+                }
+
+                return (
+                  <div style={{ marginTop: 10 }}>
+                    <p style={{ fontSize: 11, fontWeight: 500, color: '#412402', marginBottom: 6 }}>Rincian pengeluaran</p>
+                    {detailItems.map((item, idx) => (
+                      <div key={`preview-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1.7fr 0.6fr 0.7fr 0.9fr 0.9fr', fontSize: 11, color: '#412402', padding: '2px 0', borderBottom: '0.5px solid #F8D9A8' }}>
+                        <span>{item.nama}</span>
+                        <span style={{ textAlign: 'center' }}>{item.qty}</span>
+                        <span style={{ textAlign: 'center' }}>{item.satuan || '-'}</span>
+                        <span style={{ textAlign: 'right' }}>{fmt(item.harga)}</span>
+                        <span style={{ textAlign: 'right' }}>{fmt(item.subtotal)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
 
               <p style={{ textAlign: 'right', marginTop: 10, fontSize: 13, fontWeight: 500, color: '#412402' }}>Total: {fmt(sel.nominal)}</p>
             </div>
