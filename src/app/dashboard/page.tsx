@@ -8,6 +8,8 @@ const BarChart = dynamic(() => import('@/components/BarChart'), { ssr: false })
 
 interface Txn { id: string; type: string; tanggal: string; ket: string; nominal: number; nota_num: string }
 interface Stok { id: string; nama: string; jml: number; satuan: string; min_stok: number }
+interface DebtPayment { nominal: number }
+interface Debt { id: string; type: 'utang' | 'piutang'; nama: string; total: number; jatuh_tempo: string | null; lunas: boolean; debt_payments?: DebtPayment[] }
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -15,6 +17,7 @@ export default function DashboardPage() {
   const [coId, setCoId]     = useState('')
   const [txns, setTxns]     = useState<Txn[]>([])
   const [stoks, setStoks]   = useState<Stok[]>([])
+  const [debts, setDebts]   = useState<Debt[]>([])
   const [loading, setLoading] = useState(true)
   const [isOwner, setIsOwner] = useState(false)
 
@@ -27,7 +30,8 @@ export default function DashboardPage() {
     Promise.all([
       fetch(`/api/transaksi?co_id=${id}`).then(r => r.json()),
       fetch(`/api/stok?co_id=${id}`).then(r => r.json()),
-    ]).then(([t, s]) => { setTxns(t || []); setStoks(s || []); setLoading(false) })
+      fetch(`/api/debts?co_id=${id}`).then(r => r.json()),
+    ]).then(([t, s, d]) => { setTxns(t || []); setStoks(s || []); setDebts(Array.isArray(d) ? d : []); setLoading(false) })
   }, [router])
 
   const now = new Date()
@@ -42,6 +46,29 @@ export default function DashboardPage() {
   const saldo = totalIn - totalOut
   const recent = txns.slice(0, 5)
   const stokMenipis = stoks.filter(s => s.jml <= s.min_stok)
+  const debtBalance = (d: Debt) => d.total - (d.debt_payments || []).reduce((sum, payment) => sum + payment.nominal, 0)
+  const activeDebts = debts
+    .filter(d => !d.lunas && debtBalance(d) > 0)
+    .sort((a, b) => {
+      if (!a.jatuh_tempo) return 1
+      if (!b.jatuh_tempo) return -1
+      return new Date(a.jatuh_tempo).getTime() - new Date(b.jatuh_tempo).getTime()
+    })
+  const dueSoon = activeDebts.slice(0, 5)
+  const totalUtang = activeDebts.filter(d => d.type === 'utang').reduce((sum, d) => sum + debtBalance(d), 0)
+  const totalPiutang = activeDebts.filter(d => d.type === 'piutang').reduce((sum, d) => sum + debtBalance(d), 0)
+
+  function dueLabel(dueDate: string | null) {
+    if (!dueDate) return 'Belum ada jatuh tempo'
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const due = new Date(`${dueDate}T00:00:00`)
+    const days = Math.ceil((due.getTime() - today.getTime()) / 86400000)
+    if (days < 0) return `Terlambat ${Math.abs(days)} hari`
+    if (days === 0) return 'Jatuh tempo hari ini'
+    if (days === 1) return 'Jatuh tempo besok'
+    return `Jatuh tempo ${dueDate}`
+  }
 
   function logout() { localStorage.clear(); router.push('/') }
 
@@ -80,6 +107,43 @@ export default function DashboardPage() {
             ⚠ Stok menipis: {stokMenipis.map(s => `${s.nama} (sisa ${s.jml} ${s.satuan})`).join(', ')}
           </div>
         )}
+
+        {/* Utang dan piutang yang perlu diperhatikan */}
+        <div className="card" style={{ marginBottom: 14, padding: '14px 16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <p style={{ fontSize: 13, fontWeight: 500, color: '#412402' }}>Utang & Piutang</p>
+            <span style={{ fontSize: 12, color: '#854F0B', cursor: 'pointer' }} onClick={() => router.push('/utang')}>Lihat semua</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+            <div style={{ background: '#FAECE7', borderRadius: 8, padding: '9px 10px' }}>
+              <p style={{ fontSize: 11, color: '#993C1D' }}>Utang aktif</p>
+              <p style={{ fontSize: 14, fontWeight: 500, color: '#993C1D', marginTop: 2 }}>{fmt(totalUtang)}</p>
+            </div>
+            <div style={{ background: '#E1F5EE', borderRadius: 8, padding: '9px 10px' }}>
+              <p style={{ fontSize: 11, color: '#0F6E56' }}>Piutang aktif</p>
+              <p style={{ fontSize: 14, fontWeight: 500, color: '#0F6E56', marginTop: 2 }}>{fmt(totalPiutang)}</p>
+            </div>
+          </div>
+          {dueSoon.length === 0 ? (
+            <p style={{ padding: '8px 0 2px', textAlign: 'center', fontSize: 12, color: '#854F0B' }}>Belum ada utang atau piutang aktif</p>
+          ) : dueSoon.map(d => {
+            const isUtang = d.type === 'utang'
+            const overdue = d.jatuh_tempo && new Date(`${d.jatuh_tempo}T00:00:00`) < new Date(new Date().toDateString())
+            return (
+              <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 0', borderTop: '0.5px solid #FFF3CD', cursor: 'pointer' }} onClick={() => router.push(`/${isUtang ? 'utang' : 'piutang'}/${d.id}`)}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: isUtang ? '#D85A30' : '#1D9E75', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: '#412402', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.nama}</p>
+                  <p style={{ fontSize: 11, color: overdue ? '#A32D2D' : '#854F0B', marginTop: 2 }}>{dueLabel(d.jatuh_tempo)}</p>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: isUtang ? '#993C1D' : '#0F6E56' }}>{fmt(debtBalance(d))}</p>
+                  <p style={{ fontSize: 10, color: isUtang ? '#993C1D' : '#0F6E56', marginTop: 2 }}>{isUtang ? 'Utang' : 'Piutang'}</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
 
         {/* Menu utama */}
         {isOwner && (
