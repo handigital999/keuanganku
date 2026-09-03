@@ -12,6 +12,16 @@ export default function BarChart({ txns }: { txns: Txn[] }) {
   const ins: number[] = []
   const outs: number[] = []
   const bulanNama = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des']
+  const latestNominal = txns.reduce((latest, txn) => {
+    return new Date(txn.tanggal).getTime() > new Date(latest.tanggal).getTime() ? txn : latest
+  }, { tanggal: '', nominal: 0, type: '' }).nominal
+  const unit = latestNominal >= 1_000_000_000
+    ? { divisor: 1_000_000_000, label: 'miliar' }
+    : latestNominal >= 1_000_000
+      ? { divisor: 1_000_000, label: 'jt' }
+      : latestNominal >= 1_000
+        ? { divisor: 1_000, label: 'rb' }
+        : { divisor: 1, label: 'Rp' }
 
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
@@ -23,8 +33,8 @@ export default function BarChart({ txns }: { txns: Txn[] }) {
         t.type === 'masuk' ? (ti += t.nominal) : (to += t.nominal)
       }
     })
-    ins.push(Math.round(ti / 1000))
-    outs.push(Math.round(to / 1000))
+    ins.push(Math.round(ti / unit.divisor * 10) / 10)
+    outs.push(Math.round(to / unit.divisor * 10) / 10)
   }
 
   return (
@@ -32,16 +42,17 @@ export default function BarChart({ txns }: { txns: Txn[] }) {
       data={{
         labels,
         datasets: [
-          { label: 'Masuk (rb)', data: ins, backgroundColor: '#FFC107', borderRadius: 4 },
-          { label: 'Keluar (rb)', data: outs, backgroundColor: '#F0997B', borderRadius: 4 },
+          { label: `Masuk (${unit.label})`, data: ins, backgroundColor: '#FFC107', borderRadius: 4 },
+          { label: `Keluar (${unit.label})`, data: outs, backgroundColor: '#F0997B', borderRadius: 4 },
         ],
       }}
       options={{
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { labels: { font: { size: 11 }, boxWidth: 12 } } },
         scales: {
           x: { ticks: { font: { size: 11 } } },
-          y: { ticks: { font: { size: 11 }, callback: v => v + 'rb' } },
+          y: { ticks: { font: { size: 10 }, callback: v => v + ' ' + unit.label } },
         },
       }}
     />

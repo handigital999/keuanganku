@@ -96,9 +96,11 @@ export default function DashboardPage() {
 
       <div style={{ padding: 16 }}>
         {/* Grafik 6 bulan */}
-        <div className="card" style={{ marginBottom: 14, padding: '14px 16px' }}>
-          <p style={{ fontSize: 13, fontWeight: 500, color: '#412402', marginBottom: 10 }}>Keuangan 6 bulan terakhir</p>
-          <BarChart txns={txns} />
+        <div className="card" style={{ marginBottom: 14, padding: '11px 13px' }}>
+          <p style={{ fontSize: 12, fontWeight: 500, color: '#412402', marginBottom: 7 }}>Keuangan 6 bulan terakhir</p>
+          <div style={{ height: 145 }}>
+            <BarChart txns={txns} />
+          </div>
         </div>
 
         {/* Notif stok menipis */}
@@ -178,22 +180,22 @@ export default function DashboardPage() {
 
         {/* Transaksi terakhir */}
         <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #FAC775', overflow: 'hidden', marginBottom: 14 }}>
-          <div style={{ padding: '12px 16px', borderBottom: '0.5px solid #FFF3CD', display: 'flex', justifyContent: 'space-between' }}>
-            <p style={{ fontSize: 13, fontWeight: 500, color: '#412402' }}>Transaksi terakhir</p>
-            <span style={{ fontSize: 12, color: '#854F0B', cursor: 'pointer' }} onClick={() => router.push('/riwayat')}>Lihat semua</span>
+          <div style={{ padding: '9px 12px', borderBottom: '0.5px solid #FFF3CD', display: 'flex', justifyContent: 'space-between' }}>
+            <p style={{ fontSize: 12, fontWeight: 500, color: '#412402' }}>Transaksi terakhir</p>
+            <span style={{ fontSize: 11, color: '#854F0B', cursor: 'pointer' }} onClick={() => router.push('/riwayat')}>Lihat semua</span>
           </div>
           {recent.length === 0 ? (
             <p style={{ padding: 16, textAlign: 'center', fontSize: 13, color: '#854F0B' }}>Belum ada transaksi</p>
           ) : recent.map(t => (
-            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '0.5px solid #FFF3CD', cursor: 'pointer' }} onClick={() => router.push('/riwayat')}>
+              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderBottom: '0.5px solid #FFF3CD', cursor: 'pointer' }} onClick={() => router.push('/riwayat')}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.type === 'masuk' ? '#1D9E75' : '#D85A30', flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 13, fontWeight: 500, color: '#412402', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p style={{ fontSize: 12, fontWeight: 500, color: '#412402', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {t.ket} <span className="badge-nota">Nota</span>
                 </p>
-                <p style={{ fontSize: 11, color: '#854F0B' }}>{t.tanggal}</p>
+                <p style={{ fontSize: 10, color: '#854F0B' }}>{t.tanggal}</p>
               </div>
-              <p style={{ fontSize: 13, fontWeight: 500, color: t.type === 'masuk' ? '#0F6E56' : '#993C1D', whiteSpace: 'nowrap' }}>
+              <p style={{ fontSize: 12, fontWeight: 500, color: t.type === 'masuk' ? '#0F6E56' : '#993C1D', whiteSpace: 'nowrap' }}>
                 {t.type === 'masuk' ? '+' : '-'}{fmt(t.nominal)}
               </p>
             </div>
