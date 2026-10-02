@@ -16,6 +16,9 @@ export default function StokPage() {
   const [satuan, setSatuan] = useState('')
   const [harga, setHarga] = useState('')
   const [minStok, setMinStok] = useState('')
+  const [adjustments, setAdjustments] = useState<Record<string, string>>({})
+  const [savingStock, setSavingStock] = useState<string | null>(null)
+  const [err, setErr] = useState('')
 
   useEffect(() => {
     const id = localStorage.getItem('co_id')
@@ -26,27 +29,82 @@ export default function StokPage() {
       return
     }
     setCoId(id)
-    fetch(`/api/stok?co_id=${id}`).then(r => r.json()).then(d => { setStoks(d || []); setLoading(false) })
+    fetch(`/api/stok?co_id=${id}`)
+      .then(async response => {
+        if (!response.ok) throw new Error('Gagal memuat data stok.')
+        return response.json()
+      })
+      .then(d => { setStoks(Array.isArray(d) ? d : []); setLoading(false) })
+      .catch(() => { setErr('Gagal memuat data stok. Muat ulang halaman untuk mencoba lagi.'); setLoading(false) })
   }, [router])
 
   async function addStok() {
-    if (!nama || !jml || !satuan) return
-    const res = await fetch('/api/stok', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company_id: coId, nama, jml: parseFloat(jml), satuan, harga: parseFloat(harga) || 0, min_stok: parseFloat(minStok) || 0 }),
-    })
-    if (res.ok) {
-      const d = await res.json()
-      setStoks(prev => [...prev, d])
-      setOk(true); setTimeout(() => setOk(false), 1400)
-      setNama(''); setJml(''); setSatuan(''); setHarga(''); setMinStok('')
+    const jumlah = Number(jml)
+    if (!nama.trim() || !jml || !satuan.trim() || !Number.isFinite(jumlah) || jumlah < 0) {
+      setErr('Isi nama, jumlah stok yang valid, dan satuan.')
+      return
+    }
+    setErr('')
+    try {
+      const res = await fetch('/api/stok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company_id: coId, nama, jml: jumlah, satuan, harga: parseFloat(harga) || 0, min_stok: parseFloat(minStok) || 0 }),
+      })
+      if (res.ok) {
+        const d = await res.json()
+        setStoks(prev => [...prev, d])
+        setOk(true); setTimeout(() => setOk(false), 1400)
+        setNama(''); setJml(''); setSatuan(''); setHarga(''); setMinStok('')
+      } else {
+        const data = await res.json()
+        setErr(data.error || 'Gagal menambahkan stok.')
+      }
+    } catch {
+      setErr('Tidak dapat terhubung ke server. Stok belum ditambahkan.')
+    }
+  }
+
+  async function adjustStok(id: string, direction: 1 | -1) {
+    const amount = Number(adjustments[id] || '1')
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setErr('Masukkan jumlah perubahan stok yang lebih besar dari 0.')
+      return
+    }
+    setErr('')
+    setSavingStock(id)
+    try {
+      const res = await fetch('/api/stok', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, delta: direction * amount }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setStoks(prev => prev.map(stock => stock.id === id ? updated : stock))
+      } else {
+        const data = await res.json()
+        setErr(data.error || 'Gagal memperbarui stok.')
+      }
+    } catch {
+      setErr('Tidak dapat terhubung ke server. Perubahan stok belum disimpan.')
+    } finally {
+      setSavingStock(null)
     }
   }
 
   async function hapus(id: string) {
-    await fetch(`/api/stok?id=${id}`, { method: 'DELETE' })
-    setStoks(prev => prev.filter(s => s.id !== id))
+    try {
+      const res = await fetch(`/api/stok?id=${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setStoks(prev => prev.filter(s => s.id !== id))
+      } else {
+        const data = await res.json()
+        setErr(data.error || 'Gagal menghapus stok.')
+      }
+    } catch {
+      setErr('Tidak dapat terhubung ke server. Stok belum dihapus.')
+    }
   }
 
   const menipis = stoks.filter(s => s.jml <= s.min_stok)
@@ -54,11 +112,12 @@ export default function StokPage() {
   return (
     <div style={{ background: '#FFF8E1', minHeight: '100vh' }}>
       <div className="topbar" style={{ background: '#854F0B' }}>
-        <p style={{ fontSize: 15, fontWeight: 500, color: '#FAEEDA' }}>Stok barang</p>
+        <p style={{ fontSize: 15, fontWeight: 500, color: '#FAEEDA' }}>Kasir — Stok barang</p>
       </div>
       <div style={{ padding: 16 }}>
-        <button style={{ background: '#FAEEDA', color: '#412402', border: '0.5px solid #FAC775', padding: '7px 14px', borderRadius: 8, fontSize: 13, cursor: 'pointer', marginBottom: 14 }} onClick={() => router.push('/dashboard')}>← Kembali</button>
+        <button style={{ background: '#FAEEDA', color: '#412402', border: '0.5px solid #FAC775', padding: '7px 14px', borderRadius: 8, fontSize: 13, cursor: 'pointer', marginBottom: 14 }} onClick={() => router.push('/kasir')}>← Kembali ke Kasir</button>
 
+        {err && <p role="alert" style={{ fontSize: 12, color: '#A32D2D', background: '#F8D7DA', padding: '8px 12px', borderRadius: 8, marginBottom: 12 }}>{err}</p>}
         {menipis.length > 0 && (
           <div style={{ background: '#FFF3CD', border: '0.5px solid #FAC775', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#854F0B' }}>
             ⚠ Stok menipis: {menipis.map(s => `${s.nama} (sisa ${s.jml} ${s.satuan})`).join(', ')}
@@ -66,7 +125,7 @@ export default function StokPage() {
         )}
 
         {/* Form tambah stok */}
-        <div style={{ background: '#FFFBEA', borderRadius: 10, border: '0.5px solid #FAC775', padding: 16, marginBottom: 14 }}>
+        <div id="form-tambah-stok" style={{ background: '#FFFBEA', borderRadius: 10, border: '0.5px solid #FAC775', padding: 16, marginBottom: 14 }}>
           <p style={{ fontSize: 14, fontWeight: 500, color: '#412402', marginBottom: 12 }}>Tambah / update stok</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
             <div>
@@ -97,20 +156,20 @@ export default function StokPage() {
         </div>
 
         {/* Tabel stok */}
-        <p style={{ fontSize: 14, fontWeight: 500, color: '#412402', marginBottom: 10 }}>Daftar stok</p>
-        <div style={{ background: '#fff', borderRadius: 10, border: '0.5px solid #FAC775', overflow: 'hidden' }}>
+        <p id="daftar-stok" style={{ fontSize: 14, fontWeight: 500, color: '#412402', marginBottom: 10 }}>Daftar stok — cek harga dan atur jumlah</p>
+        <div style={{ background: '#fff', borderRadius: 10, border: '0.5px solid #FAC775', overflowX: 'auto' }}>
           {loading ? (
             <p style={{ padding: 16, textAlign: 'center', fontSize: 13, color: '#854F0B' }}>Memuat...</p>
           ) : stoks.length === 0 ? (
             <p style={{ padding: 16, textAlign: 'center', fontSize: 13, color: '#854F0B' }}>Belum ada stok</p>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed' }}>
+            <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ background: '#FAEEDA' }}>
-                  <th style={{ padding: '8px 10px', textAlign: 'left', color: '#633806', fontWeight: 500, width: '33%' }}>Barang</th>
-                  <th style={{ padding: '8px 10px', textAlign: 'left', color: '#633806', fontWeight: 500, width: '20%' }}>Stok</th>
-                  <th style={{ padding: '8px 10px', textAlign: 'left', color: '#633806', fontWeight: 500, width: '25%' }}>Harga/sat.</th>
-                  <th style={{ padding: '8px 10px', textAlign: 'left', color: '#633806', fontWeight: 500, width: '22%' }}>Aksi</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: '#633806', fontWeight: 500 }}>Barang</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: '#633806', fontWeight: 500 }}>Stok</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: '#633806', fontWeight: 500 }}>Harga/sat.</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: '#633806', fontWeight: 500 }}>Atur stok</th>
                 </tr>
               </thead>
               <tbody>
@@ -123,7 +182,20 @@ export default function StokPage() {
                     </td>
                     <td style={{ padding: '8px 10px', color: '#412402' }}>{fmt(s.harga)}</td>
                     <td style={{ padding: '8px 10px' }}>
-                      <button style={{ background: '#F8D7DA', color: '#721C24', border: '0.5px solid #F5C6CB', padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer' }} onClick={() => hapus(s.id)}>Hapus</button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <input
+                          aria-label={`Jumlah perubahan stok ${s.nama}`}
+                          type="number"
+                          min="0.01"
+                          step="any"
+                          value={adjustments[s.id] ?? '1'}
+                          onChange={e => setAdjustments(prev => ({ ...prev, [s.id]: e.target.value }))}
+                          style={{ width: 62, padding: '5px 7px', fontSize: 11 }}
+                        />
+                        <button disabled={savingStock === s.id} aria-label={`Tambah stok ${s.nama}`} style={{ background: '#D4EDDA', color: '#155724', border: '0.5px solid #B7DFC0', padding: '5px 8px', borderRadius: 6, fontSize: 12, cursor: 'pointer' }} onClick={() => adjustStok(s.id, 1)}>+</button>
+                        <button disabled={savingStock === s.id} aria-label={`Kurangi stok ${s.nama}`} style={{ background: '#FAECE7', color: '#993C1D', border: '0.5px solid #F5C6CB', padding: '5px 8px', borderRadius: 6, fontSize: 12, cursor: 'pointer' }} onClick={() => adjustStok(s.id, -1)}>−</button>
+                        <button style={{ background: '#F8D7DA', color: '#721C24', border: '0.5px solid #F5C6CB', padding: '5px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer' }} onClick={() => hapus(s.id)}>Hapus</button>
+                      </div>
                     </td>
                   </tr>
                 ))}

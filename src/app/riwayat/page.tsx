@@ -73,7 +73,7 @@ export default function RiwayatPage() {
 
     if (detailItems.length > 0) {
       y += 2
-      doc.setFont(undefined as any, 'bold'); doc.setFontSize(9); doc.text('Rincian Pengeluaran:', 14, y)
+      doc.setFont(undefined as any, 'bold'); doc.setFontSize(9); doc.text('Rincian Barang:', 14, y)
       y += 6
       doc.setFontSize(8)
       detailItems.forEach((item) => {
@@ -149,7 +149,7 @@ export default function RiwayatPage() {
 
                 return (
                   <div style={{ marginTop: 12, paddingTop: 8, borderTop: '0.5px solid #FFF3CD' }}>
-                    <p style={{ fontSize: 12, fontWeight: 500, color: '#412402', marginBottom: 8 }}>Rincian pengeluaran</p>
+                    <p style={{ fontSize: 12, fontWeight: 500, color: '#412402', marginBottom: 8 }}>Rincian barang</p>
                     <div style={{ border: '0.5px solid #FAC775', borderRadius: 8, overflow: 'hidden' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1.7fr 0.7fr 0.8fr 0.9fr 0.9fr', background: '#FFF3CD', fontSize: 11, fontWeight: 700, color: '#412402' }}>
                         <div style={{ padding: '8px 10px', borderRight: '0.5px solid #F8D9A8' }}>Nama</div>
@@ -194,7 +194,7 @@ export default function RiwayatPage() {
 
                 return (
                   <div style={{ marginTop: 10 }}>
-                    <p style={{ fontSize: 11, fontWeight: 500, color: '#412402', marginBottom: 6 }}>Rincian pengeluaran</p>
+                    <p style={{ fontSize: 11, fontWeight: 500, color: '#412402', marginBottom: 6 }}>Rincian barang</p>
                     {detailItems.map((item, idx) => (
                       <div key={`preview-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1.7fr 0.6fr 0.7fr 0.9fr 0.9fr', fontSize: 11, color: '#412402', padding: '2px 0', borderBottom: '0.5px solid #F8D9A8' }}>
                         <span>{item.nama}</span>

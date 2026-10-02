@@ -32,7 +32,7 @@ export default function LoginPage() {
     localStorage.setItem('co_name', data.name)
     localStorage.setItem('user_role', data.role || 'user')
     localStorage.setItem('is_owner', String(data.role === 'owner'))
-    router.push('/dashboard')
+    router.push(data.role === 'owner' ? '/dashboard' : '/pilih-mode')
     setLoading(false)
   }
 

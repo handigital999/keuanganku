@@ -19,17 +19,55 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { company_id, nama, jml, satuan, harga, min_stok } = body
 
+  if (!company_id || !nama || jml === undefined || !satuan) {
+    return NextResponse.json({ error: 'Field tidak lengkap' }, { status: 400 })
+  }
+  if (!Number.isFinite(Number(jml)) || Number(jml) < 0) {
+    return NextResponse.json({ error: 'Jumlah stok tidak valid' }, { status: 400 })
+  }
+
   // Cek apakah perusahaan owner (tidak boleh mengubah data)
   const { isOwner, response: ownerError } = await checkOwnerAccess(company_id)
   if (ownerError || isOwner) return ownerError || NextResponse.json({ error: 'Akses ditolak' }, { status: 403 })
 
   const supabase = createServerSupabase()
-  if (!company_id || !nama || !jml || !satuan) {
-    return NextResponse.json({ error: 'Field tidak lengkap' }, { status: 400 })
-  }
   const { data, error } = await supabase
     .from('stocks')
-    .insert({ company_id, nama, jml, satuan, harga: harga || 0, min_stok: min_stok || 0 })
+    .insert({ company_id, nama, jml: Number(jml), satuan, harga: Number(harga) || 0, min_stok: Number(min_stok) || 0 })
+    .select()
+    .single()
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data)
+}
+
+export async function PATCH(req: NextRequest) {
+  const body = await req.json()
+  const { id, delta } = body
+  const amount = Number(delta)
+  if (!id || !Number.isFinite(amount) || amount === 0) {
+    return NextResponse.json({ error: 'ID dan perubahan stok yang valid diperlukan' }, { status: 400 })
+  }
+
+  const supabase = createServerSupabase()
+  const { data: stock, error: stockError } = await supabase
+    .from('stocks')
+    .select('id, company_id, jml')
+    .eq('id', id)
+    .single()
+  if (stockError || !stock) return NextResponse.json({ error: 'Stok tidak ditemukan' }, { status: 404 })
+
+  const { isOwner, response: ownerError } = await checkOwnerAccess(stock.company_id)
+  if (ownerError || isOwner) return ownerError || NextResponse.json({ error: 'Akses ditolak' }, { status: 403 })
+
+  const updatedQuantity = Number(stock.jml) + amount
+  if (!Number.isFinite(updatedQuantity) || updatedQuantity < 0) {
+    return NextResponse.json({ error: 'Stok tidak boleh kurang dari 0' }, { status: 400 })
+  }
+
+  const { data, error } = await supabase
+    .from('stocks')
+    .update({ jml: updatedQuantity })
+    .eq('id', id)
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

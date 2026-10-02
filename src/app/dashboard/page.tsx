@@ -7,7 +7,6 @@ import dynamic from 'next/dynamic'
 const BarChart = dynamic(() => import('@/components/BarChart'), { ssr: false })
 
 interface Txn { id: string; type: string; tanggal: string; ket: string; nominal: number; nota_num: string }
-interface Stok { id: string; nama: string; jml: number; satuan: string; min_stok: number }
 interface DebtPayment { nominal: number }
 interface Debt { id: string; type: 'utang' | 'piutang'; nama: string; total: number; jatuh_tempo: string | null; lunas: boolean; debt_payments?: DebtPayment[] }
 
@@ -16,7 +15,6 @@ export default function DashboardPage() {
   const [coName, setCoName] = useState('')
   const [coId, setCoId]     = useState('')
   const [txns, setTxns]     = useState<Txn[]>([])
-  const [stoks, setStoks]   = useState<Stok[]>([])
   const [debts, setDebts]   = useState<Debt[]>([])
   const [loading, setLoading] = useState(true)
   const [isOwner, setIsOwner] = useState(false)
@@ -29,9 +27,8 @@ export default function DashboardPage() {
     setCoId(id); setCoName(name || ''); setIsOwner(role === 'owner')
     Promise.all([
       fetch(`/api/transaksi?co_id=${id}`).then(r => r.json()),
-      fetch(`/api/stok?co_id=${id}`).then(r => r.json()),
       fetch(`/api/debts?co_id=${id}`).then(r => r.json()),
-    ]).then(([t, s, d]) => { setTxns(t || []); setStoks(s || []); setDebts(Array.isArray(d) ? d : []); setLoading(false) })
+    ]).then(([t, d]) => { setTxns(t || []); setDebts(Array.isArray(d) ? d : []); setLoading(false) })
   }, [router])
 
   const now = new Date()
@@ -45,7 +42,6 @@ export default function DashboardPage() {
   })
   const saldo = totalIn - totalOut
   const recent = txns.slice(0, 5)
-  const stokMenipis = stoks.filter(s => s.jml <= s.min_stok)
   const debtBalance = (d: Debt) => d.total - (d.debt_payments || []).reduce((sum, payment) => sum + payment.nominal, 0)
   const activeDebts = debts
     .filter(d => !d.lunas && debtBalance(d) > 0)
@@ -103,13 +99,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Notif stok menipis */}
-        {stokMenipis.length > 0 && (
-          <div style={{ background: '#FFF3CD', border: '0.5px solid #FAC775', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#854F0B' }}>
-            ⚠ Stok menipis: {stokMenipis.map(s => `${s.nama} (sisa ${s.jml} ${s.satuan})`).join(', ')}
-          </div>
-        )}
-
         {/* Utang dan piutang yang perlu diperhatikan */}
         <div className="card" style={{ marginBottom: 14, padding: '14px 16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -160,7 +149,6 @@ export default function DashboardPage() {
             { label: 'Uang keluar', desc: 'Catat + bukti bayar', bg: '#FAECE7', icon: '↓', href: '/keluar', editable: true },
             { label: 'Riwayat & nota', desc: 'Lihat & download PDF', bg: '#E6F1FB', icon: '◻', href: '/riwayat', editable: false },
             { label: 'Rekap bulanan', desc: 'Laporan & download', bg: '#EAF3DE', icon: '▤', href: '/rekap', editable: false },
-            { label: 'Stok barang', desc: 'Kelola stok usaha', bg: '#FAEEDA', icon: '≡', href: '/stok', notif: stokMenipis.length, editable: true },
             { label: 'Utang & Piutang', desc: 'Catat & cicil utang piutang', bg: '#F0E6FB', icon: '⇄', href: '/utang', editable: true },
           ]
             .filter(m => !isOwner || !m.editable)
@@ -171,7 +159,6 @@ export default function DashboardPage() {
                 </div>
                 <p style={{ fontSize: 13, fontWeight: 500, color: '#412402' }}>
                   {m.label}
-                  {!!m.notif && <span className="badge-warning" style={{ marginLeft: 6 }}>{m.notif}</span>}
                 </p>
                 <p style={{ fontSize: 11, color: '#854F0B', marginTop: 2 }}>{m.desc}</p>
               </div>
@@ -202,7 +189,8 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        <div style={{ textAlign: 'right' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          {!isOwner && <button style={{ background: '#FAEEDA', color: '#412402', border: '0.5px solid #FAC775', padding: '8px 14px', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 500 }} onClick={() => router.push('/kasir')}>Menu Kasir</button>}
           <button style={{ background: '#412402', color: '#FFC107', border: 'none', padding: '8px 18px', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 500 }} onClick={logout}>Keluar</button>
         </div>
       </div>
