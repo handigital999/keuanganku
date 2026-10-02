@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 
 const menuItems = [
   { title: 'Checkout pelanggan', description: 'Pilih barang, hitung total, dan buat nota pembelian.', icon: '🛒', href: '/checkout', background: '#FFF3CD' },
+  { title: 'Riwayat penjualan', description: 'Cek siapa yang membeli dan barang yang terjual.', icon: '◷', href: '/kasir/riwayat', background: '#F0E6FB' },
   { title: 'Tambah stok', description: 'Catat barang baru yang masuk.', icon: '+', href: '/stok#form-tambah-stok', background: '#E1F5EE' },
   { title: 'Cek harga & stok', description: 'Lihat jumlah dan harga setiap barang.', icon: '≡', href: '/stok#daftar-stok', background: '#E6F1FB' },
   { title: 'Atur stok', description: 'Tambah atau kurangi jumlah barang.', icon: '↕', href: '/stok#daftar-stok', background: '#FAEEDA' },
