@@ -143,6 +143,8 @@ CREATE POLICY "service_role_all_stocks"
 
 **3.5** Verifikasi tabel berhasil dibuat: klik **"Table Editor"** di sidebar → harus muncul 3 tabel: companies, transactions, stocks
 
+Setelah SQL awal berhasil, jalankan juga [`migrations/20261003_checkout_barcode_prices.sql`](./migrations/20261003_checkout_barcode_prices.sql) melalui Supabase → SQL Editor (untuk project baru maupun yang sudah berjalan). Migrasi ini menambahkan barcode dan harga grosir/usaha ke tabel stok.
+
 ---
 
 ## BAGIAN 4 — Upload Project ke GitHub

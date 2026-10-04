@@ -80,3 +80,46 @@ input:focus, select:focus, textarea:focus {
 .badge-nonaktif{ background: #F8D7DA; color: #721C24; padding: 2px 8px; border-radius: 99px; font-size: 11px; }
 .badge-nota    { background: #E6F1FB; color: #185FA5; padding: 1px 6px;  border-radius: 99px; font-size: 10px; margin-left: 4px; }
 .badge-warning { background: #D85A30; color: #fff;    padding: 2px 6px;  border-radius: 99px; font-size: 10px; }
+
+.barcode-scanner-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 65%);
+}
+
+.barcode-scanner-dialog {
+  width: min(100%, 520px);
+}
+
+.barcode-scanner-video {
+  display: block;
+  width: 100%;
+  max-height: 60vh;
+  background: #1f1f1f;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .receipt-print,
+  .receipt-print * {
+    visibility: visible !important;
+  }
+
+  .receipt-print {
+    position: fixed;
+    inset: 0 auto auto 0;
+    width: 100%;
+    padding: 16px;
+    background: #fff;
+  }
+}

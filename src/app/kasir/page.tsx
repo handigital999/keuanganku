@@ -3,11 +3,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const menuItems = [
-  { title: 'Checkout pelanggan', description: 'Pilih barang, hitung total, dan buat nota pembelian.', icon: '🛒', href: '/checkout', background: '#FFF3CD' },
-  { title: 'Riwayat penjualan', description: 'Cek siapa yang membeli dan barang yang terjual.', icon: '◷', href: '/kasir/riwayat', background: '#F0E6FB' },
-  { title: 'Tambah stok', description: 'Catat barang baru yang masuk.', icon: '+', href: '/stok#form-tambah-stok', background: '#E1F5EE' },
-  { title: 'Cek harga & stok', description: 'Lihat jumlah dan harga setiap barang.', icon: '≡', href: '/stok#daftar-stok', background: '#E6F1FB' },
-  { title: 'Atur stok', description: 'Tambah atau kurangi jumlah barang.', icon: '↕', href: '/stok#daftar-stok', background: '#FAEEDA' },
+  { title: 'Riwayat penjualan', description: 'Lihat transaksi sebelumnya.', icon: '◷', href: '/kasir/riwayat', background: '#F0E6FB' },
+  { title: 'Kelola stok', description: 'Tambah barang, cek harga, dan atur jumlah.', icon: '≡', href: '/stok#daftar-stok', background: '#E1F5EE' },
 ]
 
 export default function KasirPage() {
@@ -40,29 +37,44 @@ export default function KasirPage() {
         <p style={{ fontSize: 15, fontWeight: 500, color: '#FAEEDA' }}>Menu Kasir</p>
         <button onClick={() => router.push('/pilih-mode')} style={{ background: '#FAEEDA', color: '#412402', border: '0.5px solid #FAC775', padding: '7px 12px', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}>Pilih menu</button>
       </div>
-      <div style={{ padding: 16, maxWidth: 760, margin: '0 auto' }}>
-        <div style={{ marginBottom: 16 }}>
+      <main style={{ padding: 16, maxWidth: 560, margin: '0 auto' }}>
+        <div style={{ marginBottom: 20 }}>
           <p style={{ fontSize: 18, fontWeight: 500, color: '#412402' }}>Kasir{coName ? ` — ${coName}` : ''}</p>
-          <p style={{ fontSize: 13, color: '#854F0B', marginTop: 4 }}>Kelola stok barang usaha dari sini.</p>
+          <p style={{ fontSize: 13, color: '#854F0B', marginTop: 4 }}>Transaksi dan stok barang.</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
+        <button
+          onClick={() => router.push('/checkout')}
+          style={{ width: '100%', background: '#FFC107', border: 'none', borderRadius: 12, padding: '18px 16px', textAlign: 'left', cursor: 'pointer', marginBottom: 12 }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ width: 42, height: 42, background: '#FFF3CD', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🛒</span>
+            <span>
+              <span style={{ display: 'block', fontSize: 16, fontWeight: 600, color: '#412402' }}>Checkout pelanggan</span>
+              <span style={{ display: 'block', fontSize: 12, color: '#633806', marginTop: 3 }}>Buat transaksi dan nota</span>
+            </span>
+            <span aria-hidden="true" style={{ marginLeft: 'auto', fontSize: 20, color: '#633806' }}>›</span>
+          </span>
+        </button>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 10 }}>
           {menuItems.map(item => (
             <button
               key={item.title}
               className="card"
               onClick={() => router.push(item.href)}
-              style={{ cursor: 'pointer', textAlign: 'left', padding: 16 }}
+              style={{ cursor: 'pointer', textAlign: 'left', padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}
             >
-              <span style={{ width: 36, height: 36, background: item.background, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, fontSize: 20, color: '#412402' }}>{item.icon}</span>
-              <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#412402' }}>{item.title}</span>
-              <span style={{ display: 'block', fontSize: 12, color: '#854F0B', marginTop: 4 }}>{item.description}</span>
+              <span style={{ width: 34, height: 34, flexShrink: 0, background: item.background, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#412402' }}>{item.icon}</span>
+              <span>
+                <span style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#412402' }}>{item.title}</span>
+                <span style={{ display: 'block', fontSize: 11, color: '#854F0B', marginTop: 3 }}>{item.description}</span>
+              </span>
             </button>
           ))}
         </div>
-        <div style={{ textAlign: 'right', marginTop: 20 }}>
-          <button onClick={() => router.push('/dashboard')} style={{ background: '#FFC107', color: '#412402', border: 'none', padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Ke menu Keuangan</button>
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <button onClick={() => router.push('/dashboard')} style={{ background: 'transparent', color: '#854F0B', border: 'none', padding: '6px 10px', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>Ke menu Keuangan</button>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

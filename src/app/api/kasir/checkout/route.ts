@@ -5,6 +5,7 @@ import { checkOwnerAccess } from '@/lib/check-owner-access'
 interface CheckoutItemInput {
   id: string
   qty: number
+  priceType: 'satuan' | 'grosir' | 'usaha'
 }
 
 interface StockRow {
@@ -14,6 +15,8 @@ interface StockRow {
   jml: number
   satuan: string
   harga: number
+  harga_grosir: number
+  harga_usaha: number
 }
 
 export async function POST(req: NextRequest) {
@@ -27,12 +30,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Perusahaan, tanggal, dan barang belanja wajib diisi.' }, { status: 400 })
   }
 
-  const quantities = new Map<string, number>()
+  const quantities = new Map<string, { qty: number; priceType: CheckoutItemInput['priceType'] }>()
   for (const rawItem of rawItems as CheckoutItemInput[]) {
-    if (!rawItem || typeof rawItem.id !== 'string' || !Number.isFinite(Number(rawItem.qty)) || Number(rawItem.qty) <= 0) {
+    if (
+      !rawItem ||
+      typeof rawItem.id !== 'string' ||
+      !Number.isFinite(Number(rawItem.qty)) ||
+      Number(rawItem.qty) <= 0 ||
+      !['satuan', 'grosir', 'usaha'].includes(rawItem.priceType)
+    ) {
       return NextResponse.json({ error: 'Daftar barang atau jumlah belanja tidak valid.' }, { status: 400 })
     }
-    quantities.set(rawItem.id, (quantities.get(rawItem.id) || 0) + Number(rawItem.qty))
+    const existing = quantities.get(rawItem.id)
+    if (existing && existing.priceType !== rawItem.priceType) {
+      return NextResponse.json({ error: 'Jenis harga barang yang sama tidak boleh berbeda dalam satu transaksi.' }, { status: 400 })
+    }
+    quantities.set(rawItem.id, { qty: (existing?.qty || 0) + Number(rawItem.qty), priceType: rawItem.priceType })
   }
 
   const { isOwner, response: ownerError } = await checkOwnerAccess(companyId)
@@ -42,7 +55,7 @@ export async function POST(req: NextRequest) {
   const ids = Array.from(quantities.keys())
   const { data: stocks, error: stockError } = await supabase
     .from('stocks')
-    .select('id, company_id, nama, jml, satuan, harga')
+    .select('id, company_id, nama, jml, satuan, harga, harga_grosir, harga_usaha')
     .eq('company_id', companyId)
     .in('id', ids)
 
@@ -53,13 +66,20 @@ export async function POST(req: NextRequest) {
 
   const stockRows = stocks as StockRow[]
   const details = stockRows.map(stock => {
-    const qty = quantities.get(stock.id) || 0
-    const harga = Number(stock.harga) || 0
+    const selection = quantities.get(stock.id)
+    const qty = selection?.qty || 0
+    const priceType = selection?.priceType || 'satuan'
+    const harga = Number(
+      priceType === 'grosir' ? stock.harga_grosir :
+      priceType === 'usaha' ? stock.harga_usaha :
+      stock.harga,
+    )
     return {
       id: stock.id,
       nama: stock.nama,
       qty,
       satuan: stock.satuan,
+      tipe_harga: priceType,
       harga,
       subtotal: qty * harga,
       stokSebelum: Number(stock.jml),
@@ -108,7 +128,7 @@ export async function POST(req: NextRequest) {
       tanggal,
       ket,
       nominal: total,
-      catatan: JSON.stringify(details.map(({ nama, qty, satuan, harga, subtotal }) => ({ nama, qty, satuan, harga, subtotal }))),
+      catatan: JSON.stringify(details.map(({ nama, qty, satuan, tipe_harga, harga, subtotal }) => ({ nama, qty, satuan, tipe_harga, harga, subtotal }))),
       nota_num: notaNum,
     })
     .select()
