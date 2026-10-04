@@ -31,9 +31,7 @@ interface ReceiptItem {
   nama: string
   qty: number
   satuan: string
-  harga: number
   subtotal: number
-  tipe_harga: PriceType
 }
 
 interface Receipt {
@@ -49,6 +47,22 @@ function getItemPrice(item: CartItem, priceType: PriceType | '') {
   if (priceType === 'usaha') return Number(item.harga_usaha)
   if (!priceType) return 0
   return Number(item.harga)
+}
+
+function wrapReceiptText(text: string, maxCharacters: number) {
+  const lines: string[] = []
+  let line = ''
+  for (const word of text.split(/\s+/)) {
+    const nextLine = line ? `${line} ${word}` : word
+    if (line && nextLine.length > maxCharacters) {
+      lines.push(line)
+      line = word
+    } else {
+      line = nextLine
+    }
+  }
+  if (line) lines.push(line)
+  return lines
 }
 
 export default function CheckoutPage() {
@@ -171,9 +185,7 @@ export default function CheckoutPage() {
           nama: item.nama,
           qty: item.qty,
           satuan: item.satuan,
-          harga: item.harga,
           subtotal: item.subtotal,
-          tipe_harga: item.tipe_harga,
         })),
       })
       setReceiptMode('choose')
@@ -192,137 +204,199 @@ export default function CheckoutPage() {
   async function downloadReceipt() {
     if (!receipt) return
     const { jsPDF } = await import('jspdf')
-    const doc = new jsPDF({ unit: 'mm', format: 'a5' })
-    doc.setFillColor(255, 193, 7)
-    doc.rect(0, 0, 148, 28, 'F')
-    doc.setFontSize(13)
-    doc.setTextColor(65, 36, 2)
+    const margin = 6
+    const companyLines = wrapReceiptText(coName || 'KeuanganKu', 25)
+    const customerLines = wrapReceiptText(customer.trim() || 'Umum', 38)
+    const itemLines = receipt.items.map(item => wrapReceiptText(item.nama, 38))
+    const height = 66 + companyLines.length * 6 + customerLines.length * 4 +
+      receipt.items.reduce((sum, _, index) => sum + itemLines[index].length * 4 + 10, 0)
+    const doc = new jsPDF({ unit: 'mm', format: [80, height] })
+    let y = 9
+    doc.setTextColor(35, 35, 35)
     doc.setFont('helvetica', 'bold')
-    doc.text(coName || 'KeuanganKu', 74, 11, { align: 'center' })
+    doc.setFontSize(12)
+    doc.text(companyLines, 40, y, { align: 'center' })
+    y += companyLines.length * 5 + 5
     doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    doc.text('Nota Pembelian', 74, 19, { align: 'center' })
-    doc.text(`No. Nota: ${receipt.nota_num}`, 74, 26, { align: 'center' })
-
-    let y = 38
-    doc.setFontSize(9)
-    doc.setTextColor(50, 50, 50)
-    doc.text(`Tanggal: ${receipt.tanggal}`, 14, y)
-    y += 6
-    doc.text(`Pelanggan: ${customer.trim() || 'Umum'}`, 14, y)
-    y += 10
-    doc.setFont('helvetica', 'bold')
-    doc.text('Barang', 14, y)
-    doc.text('Qty', 76, y, { align: 'right' })
-    doc.text('Harga', 105, y, { align: 'right' })
-    doc.text('Subtotal', 134, y, { align: 'right' })
-    y += 2
-    doc.setDrawColor(255, 193, 7)
-    doc.line(14, y, 134, y)
-    y += 6
-    doc.setFont('helvetica', 'normal')
-    for (const item of receipt.items) {
-      const nameLines = doc.splitTextToSize(`${item.nama} (${priceLabels[item.tipe_harga]})`, 52) as string[]
-      doc.text(nameLines, 14, y)
-      doc.text(`${item.qty} ${item.satuan}`.trim(), 76, y, { align: 'right' })
-      doc.text(fmt(item.harga), 105, y, { align: 'right' })
-      doc.text(fmt(item.subtotal), 134, y, { align: 'right' })
-      y += Math.max(6, nameLines.length * 4)
-    }
-    y += 2
-    doc.line(14, y, 134, y)
-    y += 8
-    doc.setFont('helvetica', 'bold')
-    doc.text('TOTAL', 14, y)
-    doc.text(fmt(receipt.nominal), 134, y, { align: 'right' })
-    y += 10
+    doc.text('NOTA PEMBELIAN', 40, y, { align: 'center' })
+    y += 5
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
-    doc.text('Terima kasih telah berbelanja.', 74, y, { align: 'center' })
+    doc.text(`No. ${receipt.nota_num}`, 40, y, { align: 'center' })
+    y += 5
+    doc.setDrawColor(120, 120, 120)
+    doc.setLineDashPattern([1, 1], 0)
+    doc.line(margin, y, 80 - margin, y)
+    doc.setLineDashPattern([], 0)
+    y += 6
+    doc.text(`Tanggal: ${receipt.tanggal}`, margin, y)
+    y += 5
+    doc.text('Pelanggan:', margin, y)
+    y += 4
+    doc.text(customerLines, margin, y)
+    y += customerLines.length * 4 + 5
+    doc.setFont('helvetica', 'bold')
+    doc.text('RINCIAN BELANJA', margin, y)
+    y += 5
+    for (const item of receipt.items) {
+      const nameLines = wrapReceiptText(item.nama, 38)
+      doc.setFont('helvetica', 'normal')
+      doc.text(nameLines, margin, y)
+      y += nameLines.length * 4 + 1
+      doc.text(`${item.qty} ${item.satuan}`.trim(), margin, y)
+      doc.setFont('helvetica', 'bold')
+      doc.text(fmt(item.subtotal), 80 - margin, y, { align: 'right' })
+      y += 5
+    }
+    y += 1
+    doc.setDrawColor(120, 120, 120)
+    doc.setLineDashPattern([1, 1], 0)
+    doc.line(margin, y, 80 - margin, y)
+    doc.setLineDashPattern([], 0)
+    y += 7
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.text('TOTAL', margin, y)
+    doc.text(fmt(receipt.nominal), 80 - margin, y, { align: 'right' })
+    y += 9
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.text('Terima kasih telah berbelanja.', 40, y, { align: 'center' })
     doc.save(`nota-${receipt.nota_num}.pdf`)
   }
 
-    function receiptMessage() {
-      if (!receipt) return ''
-      const items = receipt.items.map(item =>
-        `${item.nama} (${item.qty} ${item.satuan}) x ${fmt(item.harga)} [${priceLabels[item.tipe_harga]}] = ${fmt(item.subtotal)}`,
-      )
-      return [
-        `Nota ${receipt.nota_num} - ${coName || 'KeuanganKu'}`,
-        `Tanggal: ${receipt.tanggal}`,
-        `Pelanggan: ${customer.trim() || 'Umum'}`,
-        '',
-        ...items,
-        '',
-        `TOTAL: ${fmt(receipt.nominal)}`,
-        'Terima kasih telah berbelanja.',
-      ].join('\n')
+  function receiptMessage() {
+    if (!receipt) return ''
+    const items = receipt.items.flatMap(item => [
+      item.nama,
+      `  ${item.qty} ${item.satuan}  ·  ${fmt(item.subtotal)}`,
+    ])
+    return [
+      `*${(coName || 'KeuanganKu').toLocaleUpperCase('id')}*`,
+      '*NOTA PEMBELIAN*',
+      `No. nota: ${receipt.nota_num}`,
+      `Tanggal: ${receipt.tanggal}`,
+      `Pelanggan: ${customer.trim() || 'Umum'}`,
+      '------------------------------',
+      ...items,
+      '------------------------------',
+      `*TOTAL       ${fmt(receipt.nominal)}*`,
+      '',
+      'Terima kasih telah berbelanja.',
+    ].join('\n')
+  }
+
+  function createReceiptImage() {
+    if (!receipt) throw new Error('Nota belum tersedia.')
+    const canvas = document.createElement('canvas')
+    canvas.width = 720
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Browser tidak dapat membuat gambar nota.')
+
+    const padding = 54
+    const contentWidth = canvas.width - padding * 2
+    const wrapText = (text: string, maxWidth: number) => {
+      const lines: string[] = []
+      let line = ''
+      for (const word of text.split(/\s+/)) {
+        const nextLine = line ? `${line} ${word}` : word
+        if (line && context.measureText(nextLine).width > maxWidth) {
+          lines.push(line)
+          line = word
+        } else {
+          line = nextLine
+        }
+      }
+      if (line) lines.push(line)
+      return lines
+    }
+    context.font = 'bold 34px Arial, sans-serif'
+    const companyLines = wrapText(coName || 'KeuanganKu', contentWidth)
+    context.font = '24px Arial, sans-serif'
+    const customerLines = wrapText(`Pelanggan: ${customer.trim() || 'Umum'}`, contentWidth)
+    const items = receipt.items.map(item => {
+      context.font = '26px Arial, sans-serif'
+      return { item, nameLines: wrapText(item.nama, contentWidth) }
+    })
+    canvas.height = 72 + companyLines.length * 44 + 44 + 38 + 42 +
+      customerLines.length * 34 + 56 +
+      items.reduce((height, entry) => height + entry.nameLines.length * 36 + 54, 0) + 176
+    context.fillStyle = '#ffffff'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.fillStyle = '#252525'
+    context.textAlign = 'center'
+    context.font = 'bold 34px Arial, sans-serif'
+    let y = 58
+    for (const line of companyLines) {
+      context.fillText(line, canvas.width / 2, y)
+      y += 42
+    }
+    context.font = 'bold 24px Arial, sans-serif'
+    context.fillText('NOTA PEMBELIAN', canvas.width / 2, y + 2)
+    y += 40
+    context.font = '22px Arial, sans-serif'
+    context.fillText(`No. ${receipt.nota_num}`, canvas.width / 2, y)
+    y += 34
+    context.textAlign = 'left'
+    context.fillStyle = '#555555'
+    context.font = '22px Arial, sans-serif'
+    context.fillText(`Tanggal: ${receipt.tanggal}`, padding, y)
+    y += 34
+    for (const line of customerLines) {
+      context.fillText(line, padding, y)
+      y += 32
     }
 
-    function createReceiptImage() {
-      if (!receipt) throw new Error('Nota belum tersedia.')
-      const canvas = document.createElement('canvas')
-      const context = canvas.getContext('2d')
-      if (!context) throw new Error('Browser tidak dapat membuat gambar nota.')
-
-      const width = 800
-      const padding = 36
-      const lineHeight = 34
-      canvas.width = width
-      context.font = '20px sans-serif'
-      const itemLines = receipt.items.flatMap(item => {
-        const text = `${item.nama} (${item.qty} ${item.satuan}) @ ${fmt(item.harga)} ${priceLabels[item.tipe_harga]} - ${fmt(item.subtotal)}`
-        const lines: string[] = []
-        let currentLine = ''
-        for (const word of text.split(' ')) {
-          const nextLine = currentLine ? `${currentLine} ${word}` : word
-          if (currentLine && context.measureText(nextLine).width > width - padding * 2) {
-            lines.push(currentLine)
-            currentLine = word
-          } else {
-            currentLine = nextLine
-          }
-        }
-        if (currentLine) lines.push(currentLine)
-        return lines
-      })
-      canvas.height = padding * 2 + lineHeight * (6 + itemLines.length)
-      context.fillStyle = '#ffffff'
-      context.fillRect(0, 0, canvas.width, canvas.height)
-      context.fillStyle = '#854F0B'
-      context.fillRect(0, 0, width, 112)
-      context.fillStyle = '#ffffff'
-      context.font = 'bold 30px sans-serif'
-      context.fillText(coName || 'KeuanganKu', padding, 46)
-      context.font = '22px sans-serif'
-      context.fillText(`Nota ${receipt.nota_num} · ${receipt.tanggal}`, padding, 82)
-      context.fillStyle = '#412402'
-      context.font = '22px sans-serif'
-      let y = 154
-      context.fillText(`Pelanggan: ${customer.trim() || 'Umum'}`, padding, y)
-      y += lineHeight * 1.5
-      context.font = '20px sans-serif'
-      for (const line of itemLines) {
-        context.fillText(line, padding, y)
-        y += lineHeight
-      }
-      context.strokeStyle = '#FAC775'
+    const drawRule = () => {
+      context.setLineDash([8, 8])
+      context.strokeStyle = '#777777'
+      context.lineWidth = 2
       context.beginPath()
       context.moveTo(padding, y)
-      context.lineTo(width - padding, y)
+      context.lineTo(canvas.width - padding, y)
       context.stroke()
-      y += lineHeight
-      context.font = 'bold 26px sans-serif'
-      context.fillText(`TOTAL: ${fmt(receipt.nominal)}`, padding, y)
-      context.font = '18px sans-serif'
-      context.fillText('Terima kasih telah berbelanja.', padding, y + lineHeight)
-
-      const base64 = canvas.toDataURL('image/png').split(',')[1]
-      if (!base64) throw new Error('Gagal membuat gambar nota.')
-      const binary = window.atob(base64)
-      const bytes = Uint8Array.from(binary, character => character.charCodeAt(0))
-      return new File([bytes], `nota-${receipt.nota_num}.png`, { type: 'image/png' })
+      context.setLineDash([])
+      y += 34
     }
+    drawRule()
+    context.fillStyle = '#333333'
+    context.font = 'bold 22px Arial, sans-serif'
+    context.fillText('RINCIAN BELANJA', padding, y)
+    y += 38
+    for (const { item, nameLines } of items) {
+      context.font = '26px Arial, sans-serif'
+      for (const line of nameLines) {
+        context.fillText(line, padding, y)
+        y += 34
+      }
+      context.font = '22px Arial, sans-serif'
+      context.fillStyle = '#555555'
+      context.fillText(`${item.qty} ${item.satuan}`.trim(), padding, y)
+      context.fillStyle = '#252525'
+      context.font = 'bold 22px Arial, sans-serif'
+      context.textAlign = 'right'
+      context.fillText(fmt(item.subtotal), canvas.width - padding, y)
+      context.textAlign = 'left'
+      y += 46
+    }
+    drawRule()
+    context.font = 'bold 28px Arial, sans-serif'
+    context.fillStyle = '#252525'
+    context.fillText('TOTAL', padding, y)
+    context.textAlign = 'right'
+    context.fillText(fmt(receipt.nominal), canvas.width - padding, y)
+    context.textAlign = 'center'
+    y += 60
+    context.font = '22px Arial, sans-serif'
+    context.fillStyle = '#555555'
+    context.fillText('Terima kasih telah berbelanja.', canvas.width / 2, y)
+
+    const base64 = canvas.toDataURL('image/png').split(',')[1]
+    if (!base64) throw new Error('Gagal membuat gambar nota.')
+    const binary = window.atob(base64)
+    const bytes = Uint8Array.from(binary, character => character.charCodeAt(0))
+    return new File([bytes], `nota-${receipt.nota_num}.png`, { type: 'image/png' })
+  }
 
     async function sendReceiptToWhatsapp() {
       if (!receipt) return
@@ -375,24 +449,33 @@ export default function CheckoutPage() {
       </div>
       <main style={{ padding: 16, maxWidth: 900, margin: '0 auto' }}>
         <p style={{ fontSize: 18, fontWeight: 500, color: '#412402' }}>Checkout{coName ? ` — ${coName}` : ''}</p>
-        <p style={{ fontSize: 13, color: '#854F0B', margin: '4px 0 16px' }}>Pilih barang untuk menghitung pembelian dan membuat nota.</p>
+        <p style={{ fontSize: 13, color: '#854F0B', margin: '4px 0 16px' }}>Cari nama barang atau pindai barcode untuk menambahkan barang.</p>
 
         {error && <p role="alert" style={{ fontSize: 12, color: '#A32D2D', background: '#F8D7DA', padding: '9px 12px', borderRadius: 8, marginBottom: 12 }}>{error}</p>}
         {receipt && (
           <section className="card" style={{ marginBottom: 16 }}>
-            <div className="receipt-print">
-              <div style={{ textAlign: 'center', borderBottom: '1px solid #FAC775', paddingBottom: 10, marginBottom: 10 }}>
-                <p style={{ fontSize: 16, fontWeight: 600, color: '#412402' }}>{coName || 'KeuanganKu'}</p>
-                <p style={{ fontSize: 13, color: '#854F0B' }}>Nota Pembelian · {receipt.nota_num}</p>
-                <p style={{ fontSize: 12, color: '#854F0B' }}>{receipt.tanggal} · {customer.trim() || 'Pelanggan umum'}</p>
+            <div className="receipt-print receipt-paper">
+              <div className="receipt-header">
+                <p className="receipt-store-name">{coName || 'KeuanganKu'}</p>
+                <p className="receipt-title">NOTA PEMBELIAN</p>
+                <p className="receipt-number">No. {receipt.nota_num}</p>
               </div>
+              <div className="receipt-meta">
+                <p><span>Tanggal</span><strong>{receipt.tanggal}</strong></p>
+                <p><span>Pelanggan</span><strong>{customer.trim() || 'Umum'}</strong></p>
+              </div>
+              <p className="receipt-section-title">Rincian belanja</p>
               {receipt.items.map((item, index) => (
-                <div key={`${item.nama}-${index}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, padding: '7px 0', borderBottom: '0.5px solid #FFF3CD', fontSize: 13, color: '#412402' }}>
-                  <span>{item.nama} ({item.qty} {item.satuan}) × {fmt(item.harga)} · {priceLabels[item.tipe_harga]}</span>
-                  <strong>{fmt(item.subtotal)}</strong>
+                <div key={`${item.nama}-${index}`} className="receipt-item">
+                  <span className="receipt-item-name">{item.nama}</span>
+                  <div className="receipt-item-total">
+                    <span>{item.qty} {item.satuan}</span>
+                    <strong>{fmt(item.subtotal)}</strong>
+                  </div>
                 </div>
               ))}
-              <p style={{ textAlign: 'right', marginTop: 12, fontSize: 16, fontWeight: 600, color: '#412402' }}>Total: {fmt(receipt.nominal)}</p>
+              <div className="receipt-grand-total"><strong>TOTAL</strong><strong>{fmt(receipt.nominal)}</strong></div>
+              <p className="receipt-thanks">Terima kasih telah berbelanja.</p>
             </div>
             {receiptMode === 'choose' ? (
               <div className="no-print" style={{ marginTop: 16 }}>
@@ -435,7 +518,7 @@ export default function CheckoutPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14, alignItems: 'start' }}>
           <section>
-            <p style={{ fontSize: 14, fontWeight: 500, color: '#412402', marginBottom: 8 }}>Daftar barang</p>
+            <p style={{ fontSize: 14, fontWeight: 500, color: '#412402', marginBottom: 8 }}>Cari atau scan barang</p>
             {stocks.length > 0 && (
               <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                 <input
@@ -459,6 +542,8 @@ export default function CheckoutPage() {
             )}
             {stocks.length === 0 ? (
               <div className="card"><p style={{ fontSize: 13, color: '#854F0B' }}>Belum ada barang. Tambahkan stok terlebih dahulu.</p></div>
+            ) : !stockSearch.trim() ? (
+              <div className="card"><p style={{ fontSize: 13, color: '#854F0B' }}>Ketik nama barang atau scan barcode untuk mencari barang.</p></div>
             ) : filteredStocks.length === 0 ? (
               <div className="card"><p style={{ fontSize: 13, color: '#854F0B' }}>Barang tidak ditemukan.</p></div>
             ) : filteredStocks.map(stock => (

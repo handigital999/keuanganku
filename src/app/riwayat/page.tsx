@@ -6,6 +6,22 @@ import { fmt } from '@/lib/utils'
 interface Txn { id: string; type: string; tanggal: string; ket: string; nominal: number; catatan: string; nota_num: string }
 interface DetailItem { nama: string; qty: number; satuan: string; harga: number; subtotal: number }
 
+function wrapReceiptText(text: string, maxCharacters: number) {
+  const lines: string[] = []
+  let line = ''
+  for (const word of text.split(/\s+/)) {
+    const nextLine = line ? `${line} ${word}` : word
+    if (line && nextLine.length > maxCharacters) {
+      lines.push(line)
+      line = word
+    } else {
+      line = nextLine
+    }
+  }
+  if (line) lines.push(line)
+  return lines
+}
+
 export default function RiwayatPage() {
   const router = useRouter()
   const [txns, setTxns] = useState<Txn[]>([])
@@ -44,49 +60,79 @@ export default function RiwayatPage() {
   async function dlNota() {
     if (!sel) return
     const { jsPDF } = (await import('jspdf')).default ? (await import('jspdf')) : await import('jspdf')
-    // @ts-ignore
-    const doc = new jsPDF({ unit: 'mm', format: 'a5' })
-    doc.setFillColor(255, 193, 7); doc.rect(0, 0, 148, 28, 'F')
-    doc.setFontSize(13); doc.setTextColor(65, 36, 2); doc.setFont(undefined as any, 'bold')
-    doc.text(coName, 74, 11, { align: 'center' })
-    doc.setFontSize(9); doc.setFont(undefined as any, 'normal')
-    doc.text('Bukti Transaksi', 74, 19, { align: 'center' })
-    doc.text('No. Nota: ' + (sel.nota_num || sel.id), 74, 26, { align: 'center' })
-    doc.setTextColor(50, 50, 50); doc.setFontSize(10)
-
     const detailItems = parseDetailItems(sel.catatan)
     const rows: [string, string][] = [
       ['Tanggal', sel.tanggal],
       ['Jenis', sel.type === 'masuk' ? 'Uang Masuk' : 'Uang Keluar'],
       ['Keterangan', sel.ket],
     ]
-    if (detailItems.length === 0) {
-      rows.push(['Catatan', sel.catatan || '-'])
+    if (detailItems.length === 0) rows.push(['Catatan', sel.catatan || '-'])
+    const companyLines = wrapReceiptText(coName || 'KeuanganKu', 25)
+    const rowLines = rows.map(([label, value]) => [
+      ...wrapReceiptText(`${label}:`, 38),
+      ...wrapReceiptText(value, 38),
+    ])
+    const itemLines = detailItems.map(item => wrapReceiptText(item.nama, 38))
+    const height = 76 + companyLines.length * 6 +
+      rowLines.reduce((sum, lines) => sum + lines.length * 4 + 2, 0) +
+      detailItems.reduce((sum, _, index) => sum + itemLines[index].length * 4 + 10, 0)
+    const doc = new jsPDF({ unit: 'mm', format: [80, height] })
+    const margin = 6
+    let y = 9
+    doc.setTextColor(35, 35, 35)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
+    doc.text(companyLines, 40, y, { align: 'center' })
+    y += companyLines.length * 5 + 5
+    doc.setFontSize(9)
+    doc.text('BUKTI TRANSAKSI', 40, y, { align: 'center' })
+    y += 5
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.text(`No. ${sel.nota_num || sel.id}`, 40, y, { align: 'center' })
+    y += 5
+    doc.setDrawColor(120, 120, 120)
+    doc.setLineDashPattern([1, 1], 0)
+    doc.line(margin, y, 80 - margin, y)
+    doc.setLineDashPattern([], 0)
+    y += 6
+    for (const [label, value] of rows) {
+      doc.setFont('helvetica', 'bold')
+      doc.text(wrapReceiptText(`${label}:`, 38), margin, y)
+      y += 4
+      doc.setFont('helvetica', 'normal')
+      const valueLines = wrapReceiptText(value, 38)
+      doc.text(valueLines, margin, y)
+      y += valueLines.length * 4 + 3
     }
-    rows.push(['Jumlah', fmt(sel.nominal)])
-    let y = 40
-    rows.forEach(([l, v]) => {
-      doc.setFont(undefined as any, 'bold'); doc.text(l + ':', 14, y)
-      doc.setFont(undefined as any, 'normal'); doc.text(v, 50, y)
-      y += 9
-    })
-
     if (detailItems.length > 0) {
-      y += 2
-      doc.setFont(undefined as any, 'bold'); doc.setFontSize(9); doc.text('Rincian Barang:', 14, y)
-      y += 6
-      doc.setFontSize(8)
-      detailItems.forEach((item) => {
-        const label = `${item.nama} (${item.qty}${item.satuan ? ' ' + item.satuan : ''}) @ ${fmt(item.harga)}`
-        doc.setFont(undefined as any, 'normal'); doc.text(label, 18, y)
-        doc.text(fmt(item.subtotal), 120, y, { align: 'right' })
+      doc.setFont('helvetica', 'bold')
+      doc.text('RINCIAN BARANG', margin, y)
+      y += 5
+      detailItems.forEach((item, index) => {
+        doc.setFont('helvetica', 'normal')
+        doc.text(itemLines[index], margin, y)
+        y += itemLines[index].length * 4 + 1
+        doc.text(`${item.qty}${item.satuan ? ` ${item.satuan}` : ''}`, margin, y)
+        doc.setFont('helvetica', 'bold')
+        doc.text(fmt(item.subtotal), 80 - margin, y, { align: 'right' })
         y += 6
       })
     }
-
-    doc.setDrawColor(255, 193, 7); doc.line(14, y + 2, 134, y + 2)
-    doc.setFontSize(8); doc.setTextColor(150, 150, 150)
-    doc.text('KeuanganKu — Aplikasi Kontrol Keuangan Usaha', 74, y + 10, { align: 'center' })
+    doc.setDrawColor(120, 120, 120)
+    doc.setLineDashPattern([1, 1], 0)
+    doc.line(margin, y + 1, 80 - margin, y + 1)
+    doc.setLineDashPattern([], 0)
+    y += 8
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.text('TOTAL', margin, y)
+    doc.text(fmt(sel.nominal), 80 - margin, y, { align: 'right' })
+    y += 9
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7)
+    doc.setTextColor(110, 110, 110)
+    doc.text('KeuanganKu - Aplikasi Kontrol Keuangan Usaha', 40, y, { align: 'center' })
     doc.save('nota-' + (sel.nota_num || sel.id) + '.pdf')
   }
 
@@ -174,41 +220,42 @@ export default function RiwayatPage() {
             </div>
 
             {/* Preview nota */}
-            <div style={{ background: '#FFFBEA', border: '0.5px solid #FAC775', borderRadius: 10, padding: 16, marginBottom: 12 }}>
-              <div style={{ textAlign: 'center', borderBottom: '0.5px solid #FAC775', paddingBottom: 10, marginBottom: 10 }}>
-                <p style={{ fontSize: 14, fontWeight: 500, color: '#412402' }}>{coName}</p>
-                <p style={{ fontSize: 11, color: '#854F0B' }}>Bukti Transaksi</p>
-                <p style={{ fontSize: 11, color: '#633806', marginTop: 4 }}>No. Nota: {sel.nota_num || sel.id}</p>
+            <div className="receipt-paper" style={{ marginBottom: 12 }}>
+              <div className="receipt-header">
+                <p className="receipt-store-name">{coName || 'KeuanganKu'}</p>
+                <p className="receipt-title">BUKTI TRANSAKSI</p>
+                <p className="receipt-number">No. {sel.nota_num || sel.id}</p>
               </div>
-              <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
-                {[['Tanggal', sel.tanggal], ['Jenis', sel.type === 'masuk' ? 'Uang masuk' : 'Uang keluar'], ['Keterangan', sel.ket]].map(([l, v]) => (
-                  <tr key={l}><td style={{ color: '#854F0B', padding: '5px 3px' }}>{l}</td><td style={{ textAlign: 'right', padding: '5px 3px' }}>{v}</td></tr>
+              <div className="receipt-meta">
+                {[['Tanggal', sel.tanggal], ['Jenis', sel.type === 'masuk' ? 'Uang masuk' : 'Uang keluar'], ['Keterangan', sel.ket]].map(([label, value]) => (
+                  <p key={label}><span>{label}</span><strong>{value}</strong></p>
                 ))}
-              </table>
+              </div>
 
               {(() => {
                 const detailItems = parseDetailItems(sel.catatan)
                 if (detailItems.length === 0) {
-                  return <p style={{ marginTop: 10, fontSize: 11, color: '#412402', whiteSpace: 'pre-wrap' }}>{sel.catatan || '-'}</p>
+                  return <p className="receipt-section-title" style={{ textTransform: 'none', letterSpacing: 0 }}>{sel.catatan || '-'}</p>
                 }
 
                 return (
-                  <div style={{ marginTop: 10 }}>
-                    <p style={{ fontSize: 11, fontWeight: 500, color: '#412402', marginBottom: 6 }}>Rincian barang</p>
+                  <div>
+                    <p className="receipt-section-title">Rincian barang</p>
                     {detailItems.map((item, idx) => (
-                      <div key={`preview-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1.7fr 0.6fr 0.7fr 0.9fr 0.9fr', fontSize: 11, color: '#412402', padding: '2px 0', borderBottom: '0.5px solid #F8D9A8' }}>
-                        <span>{item.nama}</span>
-                        <span style={{ textAlign: 'center' }}>{item.qty}</span>
-                        <span style={{ textAlign: 'center' }}>{item.satuan || '-'}</span>
-                        <span style={{ textAlign: 'right' }}>{fmt(item.harga)}</span>
-                        <span style={{ textAlign: 'right' }}>{fmt(item.subtotal)}</span>
+                      <div key={`preview-${idx}`} className="receipt-item">
+                        <span className="receipt-item-name">{item.nama}</span>
+                        <div className="receipt-item-total">
+                          <span>{item.qty} {item.satuan}</span>
+                          <strong>{fmt(item.subtotal)}</strong>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )
               })()}
 
-              <p style={{ textAlign: 'right', marginTop: 10, fontSize: 13, fontWeight: 500, color: '#412402' }}>Total: {fmt(sel.nominal)}</p>
+              <div className="receipt-grand-total"><strong>TOTAL</strong><strong>{fmt(sel.nominal)}</strong></div>
+              <p className="receipt-thanks">KeuanganKu - Aplikasi Kontrol Keuangan Usaha</p>
             </div>
 
             <button className="btn-dark" onClick={dlNota}>⬇ Download nota (PDF)</button>
